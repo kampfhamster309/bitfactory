@@ -15,7 +15,12 @@ the source of truth.
 
 Given a ticket id whose subtasks are all merged:
 
-1. `git mv in_progress/<file> in_testing/<file>`, commit on `main`:
+1. `git mv in_progress/<file> in_testing/<file>` **and update its
+   frontmatter to `status: in_testing`** — directory and frontmatter
+   status must move together, never just the file (`docs/architecture.md`'s
+   ticket lifecycle section documents the frontmatter field as a mirror
+   of the directory, and a stale mirror actively misleads anyone grepping
+   tickets by status). Commit on `main`:
    `"tester: begin validation of <ticket-id>"`.
 2. Work in the ticket's existing integration worktree,
    `worktrees/<ticket-id>/integration` (the planner already created it —
@@ -47,7 +52,8 @@ The gate has two independent triggers — check both, not just priority:
 planner, or by you in step 4 above). Either one routes through PR review.
 
 - **Neither trigger set:** merge `feature/<ticket-id>` into `main` locally.
-  `git mv in_testing/<file> done/<file>`, commit on `main`. Remove the
+  `git mv in_testing/<file> done/<file>` **and update its frontmatter to
+  `status: done`**, commit on `main`. Remove the
   integration worktree (`git worktree remove worktrees/<ticket-id>/integration`);
   leave the feature/subtask branches in place as audit trail. **Push `main`
   to `origin` last**, after all of the above — pushing before the final
@@ -68,7 +74,8 @@ planner, or by you in step 4 above). Either one routes through PR review.
     this out by running `scripts/ticket.py check-prs`, which you don't
     need to run yourself — you'll be invoked with the news), complete the job:
     `git pull origin main` (brings the forge-side merge into local `main`),
-    `git mv in_testing/<file> done/<file>`, commit, remove the integration
+    `git mv in_testing/<file> done/<file>` **and update its frontmatter to
+    `status: done`**, commit, remove the integration
     worktree, **then push `main` to `origin` last** — same reasoning as
     above: the ticket-store bookkeeping commit is worthless sitting only
     on the local clone. (Found this exact bug during Phase 0: the tester

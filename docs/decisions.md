@@ -205,6 +205,26 @@ where a decision is expected to be reopened.
   [roadmap.md](roadmap.md#phase-1--headless-still-single-threaded).
   Gitea-specific (parses the PR's `html_url` shape); needs its own logic
   for GitHub, not just a host swap, once that migration happens.
+- **`tester.md`'s `git mv` steps now explicitly say to update `status:`
+  in the frontmatter alongside every directory move.** Found by a real
+  headless run following `tester.md` literally: 3 of its 4 `git mv`
+  steps (claim → `in_testing/`, pass → `done/`, and the delayed
+  PR-approved → `done/` completion) never said to touch `status:` at
+  all — only the `superseded` fail-path did, because that one needs a
+  non-default value and so happened to get called out. Every ticket I'd
+  hand-processed myself had a correct `status:` regardless, purely
+  because I updated it out of habit each time — the gap only showed up
+  once a real agent followed the literal instructions without that
+  unwritten assumption. This isn't cosmetic: `scripts/ticket.py next`'s
+  `dependencies_met()` check reads the frontmatter `status: done` field
+  specifically, so a stale mirror doesn't just misinform a human grepping
+  tickets, it can make a genuinely satisfied dependency look unmet.
+  Confirmed two real tickets in the actual repo already had this
+  staleness and fixed them directly. `docs/architecture.md`'s "directory
+  is authoritative, frontmatter is a convenience mirror" framing only
+  holds if the mirror is actually kept current — worth remembering if a
+  future agent-authored procedure adds another directory move without
+  this project's own habit of double-checking it.
 
 ## Git and merging
 
