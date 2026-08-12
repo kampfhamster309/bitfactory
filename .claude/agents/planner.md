@@ -39,7 +39,11 @@ Given a ticket path in `backlog/`:
    files/modules where you reasonably can, but don't over-engineer around
    unavoidable overlap — overlapping subtasks are allowed to run in
    parallel; conflicts get resolved during integration (Job B), not
-   avoided at planning time.
+   avoided at planning time. In each subtask's `description`, state
+   explicitly where the code and its tests belong (`src/` + `src/tests/`
+   for a Python target repo, that stack's own idiomatic equivalent
+   otherwise) — don't leave the worker to default to the repo root out of
+   habit.
 6. For each subtask, pick exactly one `assigned_role` from the roster in
    `agents/README.md`. If nothing in that roster genuinely fits, don't
    improvise from the full plugin catalog — say so explicitly in the

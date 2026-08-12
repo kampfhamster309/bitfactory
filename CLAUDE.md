@@ -129,3 +129,10 @@ those docs first:
   transparently. Found this because the tester correctly refused to force
   a workaround around the denial rather than guess at one — that's the
   right call if it happens again, not a bug to route around.
+- **Generated code goes in a dedicated directory (`src/` + `src/tests/`
+  for Python targets), never at the target repo's root** next to the
+  ticket-store/tooling directories. The planner states this explicitly
+  per subtask; the tester's mechanical check uses
+  `unittest discover -s src/tests -t src` for Python targets — the `-t`
+  flag, never a `PYTHONPATH=` prefix, same permission-pattern reasoning
+  as the git-push fix above.

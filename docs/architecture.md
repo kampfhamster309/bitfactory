@@ -143,6 +143,42 @@ during Phase 0 — the worker still produced correct work, just on a stray
 branch that had to be cherry-picked onto the right one by hand instead of
 landing there directly.
 
+## Application code layout
+
+Generated code goes in a dedicated directory, never at the target repo's
+root alongside the ticket-store directories (`backlog/`, `in_progress/`,
+etc.) or bitfactory's own tooling (`docs/`, `.claude/`, `scripts/`,
+`agents/`). Mixing "the product being built" in with "the factory
+operating on it" gets confusing fast once more than a couple of tickets
+have landed — found this from three tickets' worth of files sitting
+directly at repo root with nothing separating them from the pipeline's
+own scaffolding.
+
+**Default for Python target repos: `src/` for code, `src/tests/` for
+tests.** No real packaging needed (no `setup.py`/`pyproject.toml`) — just
+`src/tests/__init__.py` so `unittest discover` can find it, and:
+
+```
+python3 -m unittest discover -s src/tests -t src
+```
+
+`-t src` adds `src/` to the import path so a test can do
+`from hostname_check import get_hostname` without any `PYTHONPATH`
+environment-variable prefix. That's deliberate, not a style preference:
+an env-var prefix (`PYTHONPATH=src python3 ...`) changes what the command
+literally starts with, which breaks a plain `Bash(python3 *)` permission
+match the same way `-c http.extraHeader=...` broke `git push` (see
+[decisions.md](decisions.md#orchestration)) — `unittest`'s own `-t` flag
+avoids that class of bug entirely rather than needing a special-cased
+permission rule.
+
+Other stacks get their own idiomatic equivalent (e.g. `src/`/`__tests__/`
+for Node) — the planner decides this per target repo's actual stack when
+decomposing a ticket, and should say so explicitly in each subtask's
+description so the assigned worker doesn't default to the repo root out
+of habit. The tester's mechanical check ([below](#validation-protocol-tester-agent))
+needs to know the same convention to find and run the right test command.
+
 ## Concurrency and locking
 
 - **Claiming a ticket:** the planner claims a ticket by moving its file out

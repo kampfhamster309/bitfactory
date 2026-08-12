@@ -20,10 +20,15 @@ Given a ticket id whose subtasks are all merged:
 2. Work in the ticket's existing integration worktree,
    `worktrees/<ticket-id>/integration` (the planner already created it —
    don't make a new one).
-3. **Mechanical check:** find and run the target repo's test suite (look
-   for the obvious convention — a `package.json` test script, a Makefile
-   target, `pytest`, etc. — and if you genuinely can't find one, say so
-   rather than guessing at a command). Record pass/fail.
+3. **Mechanical check:** find and run the target repo's test suite. For a
+   Python target repo following this project's `src/` + `src/tests/`
+   convention: `python3 -m unittest discover -s src/tests -t src` — use
+   the `-t` flag, not a `PYTHONPATH=` env-var prefix, since that prefix
+   changes the command's literal start and breaks a plain
+   `Bash(python3 *)` permission match. Otherwise look for the obvious
+   convention (`package.json` test script, a Makefile target, etc.), and
+   if you genuinely can't find one, say so rather than guessing at a
+   command. Record pass/fail.
 4. **Judgment check:** re-read the ticket's user story and
    acceptance-criteria checklist. For each `- [ ]` item, decide whether the
    merged result actually satisfies it and check it off (`- [x]`) with a

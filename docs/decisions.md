@@ -163,8 +163,9 @@ where a decision is expected to be reopened.
 
 ## Agent roster
 
-- **planner and tester are bitfactory-specific agents** (not yet written)
-  that delegate implementation work to generic installed role agents rather
+- **planner and tester are bitfactory-specific agents** — written, and
+  verified working end to end (Phase 0, then Phase 1 headless) — that
+  delegate implementation work to generic installed role agents rather
   than doing it themselves.
 - **v1 worker roster confirmed as proposed** in
   [../agents/README.md](../agents/README.md) — backend-developer,
@@ -172,3 +173,17 @@ where a decision is expected to be reopened.
   test-automator, code-reviewer, database-optimizer/sql-pro,
   git-workflow-manager. Expand deliberately as real tickets show a need for
   an uncovered role, not preemptively.
+
+## Application code layout
+
+- **Generated code lives in a dedicated directory (`src/` + `src/tests/`
+  for Python targets), never at the target repo's root.** Found the root
+  getting cluttered after three tickets each dropped their files there,
+  with nothing separating them from the ticket-store/tooling directories.
+  The planner states the target layout explicitly in each subtask's
+  description (per-target-repo stack, not assumed); the tester's
+  mechanical check needs the same convention to find the test command. See
+  [architecture.md](architecture.md#application-code-layout) for the
+  concrete Python default and why it's `unittest discover -t src`, not a
+  `PYTHONPATH=` env-var prefix (same permission-pattern-matching pitfall
+  as the git-push fix above).
