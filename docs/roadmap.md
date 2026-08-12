@@ -70,11 +70,25 @@ authentication, dead `Write(...)` permission rules) along the way; the
 next headless run afterward completed fully unattended, including the
 push.
 
-## Phase 2 — Isolation and true worker parallelism
+## Phase 2 — True worker parallelism
 
-Add git worktrees per worker (per architecture.md) and let the planner
-dispatch multiple workers on one ticket concurrently instead of serially.
-Evaluate whether devcontainers are worth the setup cost here or should wait.
+Worktree-per-worker isolation already exists — it's been part of the
+design since before Phase 0 and every ticket so far has used it, just
+never for more than one worker at a time, since every ticket to date has
+had exactly one subtask. What Phase 2 actually still needs is a ticket
+the planner decomposes into 2+ genuinely independent subtasks, dispatched
+concurrently rather than one after another, so the planner's serialized
+merges — currently only theoretical, since there's never been a second
+merge to serialize against — get exercised for real, including whatever
+happens when two subtasks land close together or (deliberately, as a
+follow-up) actually touch the same file.
+
+Devcontainers are *not* planned for this phase — nothing so far suggests
+worktree-only isolation is insufficient (three tickets have run fine
+without it), and [decisions.md](decisions.md#isolation-and-safety) already
+says to revisit only if a worker genuinely needs a different runtime than
+the host or stronger sandboxing than a worktree provides. Skip until
+something actually demands it.
 
 **Exit criteria:** a ticket with 2+ independent subtasks completes with
 workers running concurrently, isolated from each other, with clean serial
