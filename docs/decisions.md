@@ -29,6 +29,21 @@ where a decision is expected to be reopened.
   root. Only relevant while bitfactory and a target repo are being
   developed side by side, as they are now; dissolves once bitfactory itself
   is finished and each run just operates on one target repo directly.
+- **Headless invocations require the workspace to be marked trusted
+  first, separately from `.claude/settings.json`.** Claude Code's
+  one-time folder-trust dialog can't be shown in headless mode; if
+  `hasTrustDialogAccepted` isn't already `true` for that project path in
+  `~/.claude.json`, **every `permissions.allow` entry gets silently
+  ignored** — with `--permission-mode dontAsk`, that means everything gets
+  denied. Found during Phase 1's first headless attempt: the planner
+  claimed a ticket (staged the `git mv`, never got to commit it) and
+  stalled there, since nothing after that was permitted. Fix: run Claude
+  Code interactively in the target repo once and accept the trust dialog,
+  or set `projects["<path>"].hasTrustDialogAccepted: true` directly in
+  `~/.claude.json`. Machine- and path-specific — not something a repo's
+  own `settings.json` can carry, so it has to be established once per
+  machine/environment before headless runs there, separately from
+  anything checked into the repo.
 
 ## Concurrency
 

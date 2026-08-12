@@ -40,7 +40,12 @@ Before the first headless run: the target repo needs a `.claude/settings.json`
 see [architecture.md](architecture.md#permission-configuration)) and every
 headless invocation needs `--permission-mode dontAsk` passed explicitly —
 otherwise it'll stall or silently deny on the first action outside the
-default permission set, with nobody watching to approve it.
+default permission set, with nobody watching to approve it. **The target
+repo's path also needs `hasTrustDialogAccepted: true` in `~/.claude.json`**
+— found this the hard way on the first attempt: without it, every
+`permissions.allow` rule in `settings.json` gets silently ignored
+regardless of how it's configured (see
+[decisions.md](decisions.md#orchestration)).
 
 Note: if a high-priority ticket goes through this phase, its approval gate
 requires a PR review ([decisions.md](decisions.md#definition-of-done--human-gate)).

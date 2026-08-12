@@ -115,3 +115,9 @@ those docs first:
   sessions silently auto-deny instead of prompting. Headless invocations
   (Phase 1) pass `--permission-mode dontAsk` explicitly on the command
   line instead, layered on top of the same allow/deny rules.
+- **`settings.json` only takes effect if the target repo's path has
+  `hasTrustDialogAccepted: true` in `~/.claude.json`.** Otherwise every
+  `permissions.allow` rule is silently ignored, not just skipped for the
+  unmatched action — found this stalling a real headless run. Machine-
+  and path-specific state, not something in either git repo; has to be
+  set once per environment before headless runs there.

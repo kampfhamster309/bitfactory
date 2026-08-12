@@ -302,6 +302,18 @@ exists in the sandbox target used for Phase 0).
   `--permission-mode dontAsk` explicitly on the command line instead, so
   interactive use keeps its normal safety net and only headless runs get
   the strict auto-deny behavior.
+- **None of this matters until the workspace is trusted.** This file's
+  `permissions.allow` rules are silently ignored entirely — not just for
+  the specific unmatched action, *all of them* — if the target repo's
+  path doesn't already have `hasTrustDialogAccepted: true` in
+  `~/.claude.json`. Headless mode can't show the one-time trust dialog to
+  get that set, so it has to be established beforehand: run Claude Code
+  interactively in the target repo once and accept it, or set that field
+  directly. This is machine-and-path-specific state, not something this
+  repo's `settings.json` can carry — see
+  [decisions.md](decisions.md#orchestration) for how this was found (a
+  headless run stalled with a ticket half-claimed, not obviously connected
+  to trust at first).
 - **This isn't adversarial-proof, and isn't meant to be.** It stops the
   clearly dangerous stuff (destructive git ops, arbitrary network egress)
   and reduces prompt friction for the well-worn path; it doesn't stop a
