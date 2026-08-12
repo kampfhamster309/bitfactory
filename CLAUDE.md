@@ -9,11 +9,12 @@ user stories flow into `backlog/` as tickets, and a pipeline of Claude Code
 agents (planner → workers → tester) plans, implements, tests, and merges
 them with as little human involvement as possible.
 
-**Current status: design phase.** There is no orchestrator, no planner/tester
-agent definitions, and no code yet — only the ticket-store directory
-skeleton and the planning docs in `docs/`. There are no build, lint, or test
-commands because there is nothing to build yet; don't assume tooling exists
-that isn't referenced below.
+**Current status: design phase.** The planner/tester agent definitions exist
+(`.claude/agents/`) and there's a small ticket-filing helper
+(`scripts/ticket.py`), but there's no orchestrator yet — nothing has driven
+a real ticket through the pipeline end to end. See `docs/roadmap.md` for
+what "implemented" means at each phase; don't assume tooling exists beyond
+what's referenced below.
 
 ## Read this first, in order
 
@@ -34,7 +35,20 @@ that isn't referenced below.
 6. `docs/glossary.md` — term definitions if something is unclear.
 7. `agents/README.md` — which agents play which role; the v1 worker roster
    (mapped to installed `voltagent-*` plugin agents).
-8. `docs/ticket-template.md` — the template for filing a new ticket.
+8. `docs/ticket-template.md` — the schema `scripts/ticket.py` implements;
+   read this if you need to know a field's meaning, not to file tickets by
+   hand (use the script instead).
+
+## Commands
+
+- `scripts/ticket.py new [flags | interactive]` — file a new ticket into
+  `backlog/`: generates the collision-safe ULID id, fills out frontmatter,
+  self-validates before writing. `--bug-of <ticket-id>` for bug tickets
+  (auto-computes `retry_count`). Run with `--help` for all flags; omit
+  flags to be prompted interactively.
+- `scripts/ticket.py validate <path>` — check an existing ticket file
+  against the same rules; non-zero exit on failure. Stdlib-only (no venv/
+  install step) — this is the only tooling in the repo so far.
 
 ## Invariants that must not be violated when implementing this
 
@@ -50,7 +64,9 @@ those docs first:
   actually in.
 - **Ticket IDs are `<ULID-or-timestamp>-<slug>.md`**, bug tickets add a
   `bug_` prefix to the slug. Never go back to sequential numbering — it was
-  explicitly rejected for collision reasons.
+  explicitly rejected for collision reasons. File tickets with
+  `scripts/ticket.py new`, not by hand — it's what actually generates a
+  correct id and validates the result.
 - **Claiming a ticket is an atomic `rename(2)` out of `backlog/`** — this is
   the lock. It only works because exactly one orchestrator/planner loop
   runs at a time (v1 assumption); don't add a second concurrent planner

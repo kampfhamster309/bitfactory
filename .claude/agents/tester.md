@@ -63,12 +63,18 @@ planner, or by you in step 4 above). Either one routes through PR review.
 
 ## On fail
 
-1. File a new ticket in `backlog/` with a `bug_` filename prefix,
-   `bug_of: <original-ticket-id>`, `retry_count: <original's retry_count + 1>`,
-   and a description of which check failed and why — cite specific test
+1. Compute `retry_count + 1` from the original ticket's own `retry_count`
+   (you already have this from reading it). If that exceeds 3, skip
+   straight to Escalation below — don't file another bug ticket.
+2. Otherwise, file the bug ticket with the helper rather than writing
+   frontmatter by hand:
+   `scripts/ticket.py new --bug-of <original-ticket-id> --priority <same
+   as original, unless the failure itself clearly warrants a different
+   urgency> --title "..." --story "..." --criteria "..."` (repeat
+   `--criteria` per item). It auto-computes `retry_count` and sets
+   `bug_of`/`source` for you — don't set those by hand. Describe which
+   check failed and why in `--story`/`--criteria` — cite specific test
    failures or unmet criteria, not just "failed".
-2. If the new `retry_count` exceeds 3, don't file another bug ticket —
-   escalate instead (see below).
 3. Append a Log entry on the original ticket pointing to the new bug
    ticket id (or to the human escalation).
 4. Move the original ticket out of `in_testing/` — it's no longer active

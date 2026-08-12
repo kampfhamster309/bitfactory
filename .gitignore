@@ -4,6 +4,10 @@
 .idea/
 .vscode/
 
+# Python
+__pycache__/
+*.pyc
+
 # git worktrees created for isolated worker agents (Phase 2+)
 /worktrees/
 
