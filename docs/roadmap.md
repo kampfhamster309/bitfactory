@@ -128,7 +128,13 @@ something.
 
 **Exit criteria:** multiple tickets progress through the pipeline
 concurrently without collisions, and a `high`-priority ticket added after a
-`low`-priority one gets picked up first.
+`low`-priority one gets picked up first. **Met** — `scripts/ticket.py next`
+correctly picked the high-priority ticket over the earlier-filed
+low-priority one, and both sat in `in_progress/` simultaneously with
+independent worktrees/branches, workers dispatched concurrently across
+both, zero collisions. As a bonus, this run also proved the PR gate
+behaves identically with a second ticket concurrently in flight,
+including a real `tea`-not-installed → `curl` REST API fallback.
 
 ## Phase 4 — External ticket sources
 
