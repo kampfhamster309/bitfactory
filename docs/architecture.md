@@ -296,7 +296,12 @@ exists in the sandbox target used for Phase 0).
   one specific git-forge host (`curl https://YOUR-GIT-FORGE-HOST/*` —
   **edit this placeholder per target repo**, it's the one line that can't
   be copied verbatim). Writes are scoped to the ticket-store directories
-  and `worktrees/**` — nowhere else.
+  and `worktrees/**` — nowhere else, via `Edit(path/**)` rules only.
+  (There's no separate `Write(path/**)` permission — Claude Code's own
+  file-permission checks only look at `Edit` rules, which cover every
+  file-editing tool; a `Write(...)` entry is silently never matched.
+  Found this from Claude Code's own warning on a real headless run and
+  dropped the dead entries rather than leaving them as confusing noise.)
 - **What it denies, explicitly (defense in depth):** force-push, hard
   reset, force branch deletion, `rm -rf`, `sudo`, and `WebFetch`. Deny
   rules always win over allow rules, so these stay blocked even if a
