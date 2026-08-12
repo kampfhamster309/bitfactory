@@ -61,6 +61,10 @@ documents the schema itself, per
 [docs/architecture.md](docs/architecture.md#ticket-id-and-file-format), for
 reference or for filing one by hand if you'd rather.
 
+`scripts/ticket.py next` (Phase 3) picks which `backlog/` ticket to claim
+next — highest priority first, FIFO within the same priority — respecting
+the `in_progress/` concurrency cap via `--cap` (default 3).
+
 ## Permission configuration
 
 [docs/settings.json.example](docs/settings.json.example) is the template

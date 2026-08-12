@@ -92,6 +92,13 @@ where a decision is expected to be reopened.
 
 - **Max 3 tickets in `in_progress/` at once (v1).**
 - **Max 3 worker agents running in parallel per ticket (v1).**
+- **`scripts/ticket.py next` picks which backlog ticket to claim next**
+  (Phase 3): highest priority first, FIFO within the same priority
+  (ULID-ordered), enforcing the `in_progress/` cap above via `--cap`
+  (default 3). Added because nothing did this before — every prior
+  ticket was handed to the orchestrator explicitly by name; there was no
+  actual selection logic anywhere despite priority being part of the
+  ticket schema since v1.
 - **No separate token/cost budget per ticket for v1** — the retry cap (below)
   is the only cost bound for now. *Revisit when:* Phase 0 shows what a real
   ticket actually costs, or a ticket burns unexpectedly high cost without

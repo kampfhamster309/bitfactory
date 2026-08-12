@@ -109,10 +109,22 @@ to this phase's parallelism claim.
 
 ## Phase 3 — Multiple tickets in flight, priority-aware
 
-Add the concurrency caps and locking discussed in
-[open-questions.md](open-questions.md#concurrency-and-cost), and make the
-orchestrator actually respect ticket priority when choosing what to work on
-next rather than pure FIFO.
+The concurrency caps themselves were already decided back in v1
+([decisions.md](decisions.md#concurrency)) and enforced per-ticket since
+Phase 0/2 (worktree caps, serialized merges). What Phase 3 actually needs,
+and didn't exist before it: a way to *pick* which ticket to claim next
+when more than one is waiting, and an orchestrator that keeps 2+ tickets
+genuinely in flight at once instead of always finishing one before
+starting the next.
+
+`scripts/ticket.py next` does the picking: highest priority first, FIFO
+(by ULID creation order) within the same priority, respecting the
+`in_progress/` concurrency cap (`--cap`, default 3, matching
+[decisions.md](decisions.md#concurrency)). It deliberately doesn't do the
+cross-ticket conflict check ([architecture.md](architecture.md#cross-ticket-conflict-avoidance))
+— that needs a specific ticket already chosen and its content read, so
+it stays the planner's job during Job A, after `next` has picked
+something.
 
 **Exit criteria:** multiple tickets progress through the pipeline
 concurrently without collisions, and a `high`-priority ticket added after a

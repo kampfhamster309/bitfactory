@@ -21,6 +21,8 @@ Usage:
     scripts/ticket.py new   # interactive, prompts for everything
 
     scripts/ticket.py validate backlog/01J8Z3K9F7-add-csv-export.md
+
+    scripts/ticket.py next   # which backlog/ ticket to claim next (priority, then FIFO)
 """
 
 from __future__ import annotations
@@ -37,6 +39,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TICKET_DIRS = ["backlog", "in_progress", "in_testing", "done", "needs_human"]
 PRIORITIES = ("low", "medium", "high")
 SOURCES = ("human", "bug-loop", "jira", "github")
+DEFAULT_TICKET_CAP = 3   # matches decisions.md#concurrency's v1 default; configurable, not hardcoded there either
 
 CROCKFORD_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
@@ -320,6 +323,45 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_next(args: argparse.Namespace) -> int:
+    """Pick which backlog/ ticket to claim next: highest priority first,
+    FIFO (by ULID creation order) within the same priority. Respects the
+    ticket concurrency cap by checking in_progress/'s current size.
+
+    Deliberately does NOT do the cross-ticket conflict check
+    (architecture.md#cross-ticket-conflict-avoidance) -- that compares a
+    specific ticket's likely file footprint against a specific open PR's
+    actual diff, which needs the ticket already chosen and its content
+    read. This command only answers "which ticket, if any" -- the
+    planner still does that check itself during Job A after this.
+    """
+    in_progress_count = sum(1 for _ in (REPO_ROOT / "in_progress").glob("*.md"))
+    if in_progress_count >= args.cap:
+        sys.exit(
+            f"error: at capacity -- {in_progress_count} ticket(s) already in "
+            f"in_progress/ (cap: {args.cap}); nothing to claim right now"
+        )
+
+    priority_rank = {p: i for i, p in enumerate(PRIORITIES)}
+    candidates: list[tuple[int, str, Path]] = []
+    for path in (REPO_ROOT / "backlog").glob("*.md"):
+        try:
+            fields, _ = parse_ticket(path.read_text())
+        except ValueError as e:
+            print(f"warning: skipping unparseable ticket {path.name}: {e}", file=sys.stderr)
+            continue
+        rank = priority_rank.get(fields.get("priority"), -1)
+        candidates.append((rank, path.name, path))
+
+    if not candidates:
+        sys.exit("error: backlog/ is empty -- nothing to claim")
+
+    candidates.sort(key=lambda c: (-c[0], c[1]))
+    _, _, chosen = candidates[0]
+    print(chosen.relative_to(REPO_ROOT))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -337,6 +379,13 @@ def main() -> int:
     p_val = sub.add_parser("validate", help="validate an existing ticket file")
     p_val.add_argument("path", help="path to the ticket file")
     p_val.set_defaults(func=cmd_validate)
+
+    p_next = sub.add_parser("next", help="pick the next backlog/ ticket to claim (priority, then FIFO)")
+    p_next.add_argument(
+        "--cap", type=int, default=DEFAULT_TICKET_CAP,
+        help=f"max tickets allowed in in_progress/ at once (default: {DEFAULT_TICKET_CAP})",
+    )
+    p_next.set_defaults(func=cmd_next)
 
     args = parser.parse_args()
     return args.func(args)

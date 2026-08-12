@@ -53,6 +53,11 @@ don't assume tooling exists beyond what's referenced below.
 - `scripts/ticket.py validate <path>` — check an existing ticket file
   against the same rules; non-zero exit on failure. Stdlib-only (no venv/
   install step) — this is the only tooling in the repo so far.
+- `scripts/ticket.py next [--cap N]` — pick which `backlog/` ticket to
+  claim next: highest priority first, FIFO within the same priority,
+  respecting the `in_progress/` cap (default 3). Non-zero exit if nothing's
+  claimable (backlog empty or at capacity) — check the exit code before
+  assuming stdout has a path.
 
 ## Invariants that must not be violated when implementing this
 
