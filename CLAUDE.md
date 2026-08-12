@@ -121,3 +121,11 @@ those docs first:
   unmatched action — found this stalling a real headless run. Machine-
   and path-specific state, not something in either git repo; has to be
   set once per environment before headless runs there.
+- **Never authenticate `git push`/`pull` with a `-c http.extraHeader=...`
+  flag under `dontAsk` — use a git credential helper instead.** The flag
+  changes the command's prefix and stops matching a plain
+  `Bash(git push origin *)` allow rule; a credential helper (see
+  `architecture.md#secrets`) lets the unprefixed command authenticate
+  transparently. Found this because the tester correctly refused to force
+  a workaround around the denial rather than guess at one — that's the
+  right call if it happens again, not a bug to route around.

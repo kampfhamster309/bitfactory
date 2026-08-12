@@ -44,6 +44,24 @@ where a decision is expected to be reopened.
   own `settings.json` can carry, so it has to be established once per
   machine/environment before headless runs there, separately from
   anything checked into the repo.
+- **`git push`/`pull` need a real git credential helper configured —
+  not the `-c http.extraHeader=...` flag used manually throughout this
+  project so far.** That flag changes a command's prefix (`git -c ...
+  push` instead of `git push`), which stops matching a plain
+  `Bash(git push origin *)` allow rule — Claude Code's permission
+  patterns match on literal command structure. Found when the tester
+  correctly diagnosed this itself mid-run rather than forcing a
+  workaround: it had no way to authenticate `git push origin main` under
+  `dontAsk`, since `git config *` isn't allow-listed either (so it
+  couldn't set up a helper on its own) and `tea` wasn't installed. Fix:
+  configure a credential helper once, locally, per repo/machine —
+  `git config credential.helper '!f() { echo username=token; echo
+  "password=$GIT_FORGE_TOKEN"; }; f'` — so a plain, unprefixed
+  `git push`/`git pull` just authenticates transparently, matching the
+  existing allow rule without needing special-casing. Lives in
+  `.git/config`, not tracked by either repo, same category as the
+  trust-dialog fix above: one-time environment setup, not something
+  either repo's files can carry.
 
 ## Concurrency
 

@@ -263,6 +263,18 @@ least-privilege boundary as the guardrails above:
 - **Never logged:** it must not leak into a ticket's `## Log` section or any
   persisted command output, the same way the guardrails above keep worker
   actions from writing outside their worktree.
+- **How `git push`/`pull` actually use it: a git credential helper, not a
+  command-line flag.** `git config credential.helper '!f() { echo
+  username=token; echo "password=$GIT_FORGE_TOKEN"; }; f'`, configured
+  once per repo/machine — reads the token fresh from the env var each
+  time, never writes it to disk. Deliberately *not* the
+  `-c http.extraHeader="Authorization: token $GIT_FORGE_TOKEN"` flag used
+  manually earlier in this project: that flag changes the command's
+  prefix, which breaks a plain `Bash(git push origin *)` permission match
+  under `--permission-mode dontAsk` (see
+  [decisions.md](decisions.md#orchestration)). PR creation via `curl` is
+  unaffected — the token there is a header *argument*, not a wrapping
+  flag, so it doesn't change what the command starts with.
 
 Storing it this way now (env var / gitignored file, planner+tester only,
 never persisted) means switching from the Gitea token to a real GitHub PAT

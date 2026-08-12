@@ -45,7 +45,14 @@ repo's path also needs `hasTrustDialogAccepted: true` in `~/.claude.json`**
 — found this the hard way on the first attempt: without it, every
 `permissions.allow` rule in `settings.json` gets silently ignored
 regardless of how it's configured (see
-[decisions.md](decisions.md#orchestration)).
+[decisions.md](decisions.md#orchestration)). **A real git credential
+helper needs to be configured too** — not the `-c http.extraHeader=...`
+flag used manually so far, which breaks the `Bash(git push origin *)`
+permission match under `dontAsk`; see
+[architecture.md](architecture.md#secrets) for the fix. Found this one
+because the tester correctly refused to force a workaround and logged
+the blocker instead of guessing — worth treating as the intended
+behavior, not a bug, even though it meant a stalled run.
 
 Note: if a high-priority ticket goes through this phase, its approval gate
 requires a PR review ([decisions.md](decisions.md#definition-of-done--human-gate)).
