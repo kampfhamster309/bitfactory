@@ -29,14 +29,18 @@ where a decision is expected to be reopened.
 - **Approval gate is priority-based: high-priority tickets require human
   approval before `in_testing/ → done/`; low and medium go dark
   automatically** once tests pass and acceptance criteria are judged met.
-- **Approval mechanism: GitHub PR review.** The ticket's feature branch is
-  pushed and opened as a PR; approval = PR approved/merged. **Consequence:**
-  the repo needs a GitHub remote as soon as any high-priority ticket reaches
-  `in_testing/`, even though full GitHub Issues/Projects *intake*
-  integration is still deferred to Phase 4 (see
-  [overview.md](overview.md#non-goals-v1)). This is a real, earlier-than-planned
-  dependency worth remembering if Phase 0's first test ticket happens to be
-  high-priority.
+- **Approval mechanism: PR/MR review on a git forge.** The ticket's feature
+  branch is pushed and opened as a PR; approval = PR approved/merged.
+  **Remote used for this: the local Gitea instance** (self-hosted on the
+  Unraid server), not the `origin` GitHub remote — Phase 0/1 test runs
+  target Gitea so an unattended run can't do anything visible on the real
+  GitHub repo while the pipeline is still unproven. GitHub is the eventual
+  production target once the pipeline has a track record; switching is a
+  remote/config change, not a design change, since Gitea speaks a
+  compatible PR flow. **Consequence either way:** a git-forge remote is
+  needed as soon as any high-priority ticket reaches `in_testing/`, even
+  though full GitHub Issues/Projects *intake* integration is still deferred
+  to Phase 4 (see [overview.md](overview.md#non-goals-v1)).
 - **No earlier gate for v1** — only the end gate above; the planner's
   subtask breakdown is not reviewed before workers start. *Revisit when:* bad
   subtask decompositions turn out to be a recurring problem.

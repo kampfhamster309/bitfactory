@@ -11,7 +11,8 @@ one hand-written ticket, driven interactively from this Claude Code session
 acting as the orchestrator. No automation loop, no locking, no concurrency
 caps — the goal is to validate the ticket format, the planner/tester agent
 definitions, and the git branching model actually work before automating
-anything around them.
+anything around them. If the walkthrough exercises a high-priority ticket's
+approval gate, push to the local Gitea instance for that, not `origin`.
 
 **Exit criteria:** one ticket goes end to end to `done/` with a clean,
 inspectable git history and a ticket file that accurately reflects what
@@ -30,8 +31,10 @@ design it around. Still one ticket in flight at a time — this phase is
 about proving headless invocation works, not about parallelism yet.
 
 Note: if a high-priority ticket goes through this phase, its approval gate
-requires a GitHub PR review ([decisions.md](decisions.md#definition-of-done--human-gate)),
-which means the repo needs a GitHub remote — earlier than the GitHub
+requires a PR review ([decisions.md](decisions.md#definition-of-done--human-gate)).
+Test runs in this phase target the local Gitea instance, not the `origin`
+GitHub remote — keeps unattended runs from doing anything visible on the
+real repo while the pipeline is still unproven, ahead of the GitHub
 *intake* integration planned for Phase 4.
 
 **Exit criteria:** a ticket dropped into `backlog/` reaches `done/` (or

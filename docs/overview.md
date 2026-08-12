@@ -23,8 +23,9 @@ tested code.
 ## Non-goals (v1)
 
 - No Jira/GitHub Projects *intake* integration yet — plain markdown files in
-  `backlog/` are the only ticket source. (GitHub is still used earlier than
-  that, for PR-based approval of high-priority tickets — see
+  `backlog/` are the only ticket source. (A git forge is still used earlier
+  than that, for PR-based approval of high-priority tickets — the local
+  Gitea instance for now, GitHub eventually — see
   [decisions.md](decisions.md#definition-of-done--human-gate) — that's a
   separate concern from ticket intake.)
 - No devcontainers / full sandboxed execution environments yet — isolation
@@ -99,8 +100,9 @@ around them instead of discovering them mid-implementation:
    whatever's downstream of `done/`. v1 makes the human gate a config
    option that gets relaxed as trust in the pipeline grows, rather than
    being absent by default. (Resolved: priority-based — high-priority
-   tickets require GitHub PR approval, low/medium go dark automatically.
-   See [decisions.md](decisions.md#definition-of-done--human-gate).)
+   tickets require PR approval on the local Gitea instance (for now),
+   low/medium go dark automatically. See
+   [decisions.md](decisions.md#definition-of-done--human-gate).)
 
 None of these are reasons not to build this — they're the reason to design
 the state machine and git model deliberately instead of letting "an agent
@@ -132,7 +134,8 @@ question remains genuinely open — see
    feature branch, and separately judges the result against the original
    acceptance criteria.
    - Pass → ticket moves to `done/` automatically for low/medium priority;
-     high-priority tickets wait for GitHub PR approval first (see
+     high-priority tickets wait for PR approval on the local Gitea instance
+     first (see
      [decisions.md](decisions.md#definition-of-done--human-gate)).
    - Fail → a new `bug_`-prefixed ticket is filed in `backlog/`, referencing
      the original ticket and a retry count; after 3 failed attempts on one

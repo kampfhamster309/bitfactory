@@ -152,6 +152,32 @@ Loosen these deliberately per-role only when a specific worker genuinely
 needs more (e.g. a role that must run a package manager against a real
 registry), not as a blanket default.
 
+## Secrets
+
+The git-forge token (the local Gitea PAT for now, a GitHub PAT once the
+pipeline earns that per [decisions.md](decisions.md#definition-of-done--human-gate))
+is the only credential the pipeline currently needs, and it follows the same
+least-privilege boundary as the guardrails above:
+
+- **Scope:** repo access only, no admin rights on the Gitea instance —
+  narrower than "throwaway instance" might tempt you into, since the token
+  is still a real credential at rest.
+- **Storage:** an untracked, gitignored local file or env var (or the `tea`
+  CLI's own config file) — never committed, never pasted into a ticket file,
+  a doc, or a script argument that'd land in shell history.
+- **Who holds it:** only the planner and tester agents, since they're the
+  only roles that push branches or open/merge PRs. Workers never need it —
+  it's out of scope for the worker guardrails above by construction, not
+  because it's separately allowlisted away from them.
+- **Never logged:** it must not leak into a ticket's `## Log` section or any
+  persisted command output, the same way the guardrails above keep worker
+  actions from writing outside their worktree.
+
+Storing it this way now (env var / gitignored file, planner+tester only,
+never persisted) means switching from the Gitea token to a real GitHub PAT
+later is a value swap in the same slot, not a rethink of how secrets flow
+through the pipeline.
+
 ## Validation protocol (tester agent)
 
 Two distinct checks, reported separately rather than collapsed into one
@@ -184,13 +210,17 @@ produces a `bug_` ticket describing which check failed and why.
 - **Low- and medium-priority tickets** go straight to `done/` automatically
   once the full suite passes and acceptance criteria are judged met.
 
-Approval happens via **GitHub PR review**: the ticket's feature branch is
-pushed and opened as a PR, and approval means the PR is approved/merged.
-This means **the repo needs a GitHub remote as soon as any high-priority
-ticket reaches `in_testing/`** — worth remembering even in Phase 0, since
-this dependency arrives earlier than the GitHub *integration* work planned
-for Phase 4 (which is about ticket intake, a separate concern from using
-GitHub for this approval step).
+Approval happens via **PR/MR review on a git forge**: the ticket's feature
+branch is pushed and opened as a PR, and approval means the PR is
+approved/merged. For Phase 0/1, this targets the **local Gitea instance**
+(self-hosted on the Unraid server) rather than the `origin` GitHub remote —
+an unattended run's PR-opening/merging can't touch the real repo while the
+pipeline is still unproven. GitHub becomes the target once the pipeline has
+earned that. Either way, **a git-forge remote is needed as soon as any
+high-priority ticket reaches `in_testing/`** — worth remembering even in
+Phase 0, since this dependency arrives earlier than the GitHub *intake*
+integration work planned for Phase 4 (a separate concern from using a forge
+for this approval step).
 
 There is no earlier gate in v1 — the planner's subtask breakdown is not
 reviewed before workers start; only this end gate exists.
