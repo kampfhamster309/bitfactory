@@ -62,6 +62,22 @@ where a decision is expected to be reopened.
   `.git/config`, not tracked by either repo, same category as the
   trust-dialog fix above: one-time environment setup, not something
   either repo's files can carry.
+- **`settings.json`'s git allow/deny rules are each listed three ways:
+  plain, `git -C <path> ...`, and `cd <path> && git ...`.** Permission
+  patterns match literal command prefix, so agents working from a
+  different directory than the repo root (routine for the planner,
+  operating on a subtask's worktree) hit this whenever they don't
+  literally type an unprefixed `git ...` from the repo root. A headless
+  run found this and worked around it itself (`subprocess.run(cwd=...)`
+  via the already-broad `python3 *` allow) rather than stalling — good
+  that it could, but a workaround that happened to work once isn't
+  something to depend on, especially with no human watching. Fixed by
+  listing all three forms for every rule, allow *and* deny — an
+  unprefixed deny doesn't catch the `-C`/`cd &&` forms of the same
+  command either, so broadening allow without broadening deny the same
+  way would have quietly reopened exactly the holes deny exists to close
+  (force-push, hard reset, branch deletion, `rm -rf`, `sudo`). See
+  [architecture.md](architecture.md#permission-configuration).
 
 ## Concurrency
 

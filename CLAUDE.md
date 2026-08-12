@@ -136,3 +136,10 @@ those docs first:
   `unittest discover -s src/tests -t src` for Python targets — the `-t`
   flag, never a `PYTHONPATH=` prefix, same permission-pattern reasoning
   as the git-push fix above.
+- **`settings.json` lists every git allow/deny rule three ways** (plain,
+  `git -C <path> ...`, `cd <path> && git ...`) — permission patterns
+  match literal prefix, so an agent working from a different directory
+  than the repo root needs the prefixed forms explicitly allowed, and
+  every deny needs the same three-way treatment or it's just as
+  bypassable via the same prefixes. Don't add a git allow rule in only
+  one of the three forms going forward.

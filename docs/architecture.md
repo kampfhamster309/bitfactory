@@ -375,6 +375,25 @@ exists in the sandbox target used for Phase 0).
   plus the human review at the PR gate, not by this file — consistent with
   treating these as cooperative agents following documented procedure, not
   something being defended against active misuse.
+- **Every allow rule for a git subcommand is listed three times: plain,
+  `git -C <path> <subcommand>`, and `cd <path> && git <subcommand>`.**
+  Permission patterns match on literal command prefix, so a plain
+  `Bash(git commit *)` rule doesn't cover `git -C worktrees/.../commit`
+  or `cd worktrees/... && git commit` — agents need one or the other
+  whenever they're not already in the right directory (e.g. the planner
+  operating on a subtask's worktree from the repo root). Found on a
+  headless run: it worked around the gap itself (routing through
+  `subprocess.run(cwd=...)` under the broad `python3 *` allow) rather
+  than getting stuck, but a workaround succeeding once isn't something to
+  rely on, especially unattended — so all three forms are allow-listed
+  explicitly now. **Every deny rule got the same three-way treatment**,
+  for the same reason in the other direction: a bare `Bash(git branch -D *)`
+  deny doesn't catch `git -C <path> branch -D <name>` or
+  `cd <path> && git branch -D <name>` either — an unprefixed deny rule
+  is exactly as bypassable via `-C`/`cd &&` as an unprefixed allow rule
+  is unusable, so broadening the allow list without broadening the deny
+  list the same way would have quietly reopened the force-push/hard-reset/
+  branch-deletion/`rm -rf`/`sudo` holes it exists to close.
 
 ## Validation protocol (tester agent)
 
