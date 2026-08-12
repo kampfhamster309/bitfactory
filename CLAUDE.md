@@ -145,3 +145,10 @@ those docs first:
   every deny needs the same three-way treatment or it's just as
   bypassable via the same prefixes. Don't add a git allow rule in only
   one of the three forms going forward.
+- **Non-git allow rules need their `cd <path> && ...` counterpart added
+  in the same change too** — `python -m *` was missing one (only
+  `python3 *` had it) and a worker hit the gap, working around it via
+  `python3 -c` instead of the intended command rather than getting
+  stuck. Don't rely on an agent improvising past a permission gap;
+  close it. This applies to any command an agent might reasonably run
+  from a worktree other than the repo root, not just git/python.

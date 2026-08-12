@@ -42,8 +42,9 @@
 
       "Bash(python3 scripts/ticket.py *)",
       "Bash(python3 *)",
-      "Bash(python -m *)",
       "Bash(cd * && python3 *)",
+      "Bash(python -m *)",
+      "Bash(cd * && python -m *)",
 
       "Bash(tea *)",
       "Bash(curl https://YOUR-GIT-FORGE-HOST/*)",

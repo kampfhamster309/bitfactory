@@ -394,6 +394,21 @@ exists in the sandbox target used for Phase 0).
   is unusable, so broadening the allow list without broadening the deny
   list the same way would have quietly reopened the force-push/hard-reset/
   branch-deletion/`rm -rf`/`sudo` holes it exists to close.
+- **`python -m *` needs the same `cd <path> &&` form as `python3 *`, not
+  just the plain one.** These two allow rules were added at different
+  times and ended up asymmetric: `Bash(python3 *)` got a matching
+  `Bash(cd * && python3 *)`, but `Bash(python -m *)` didn't get
+  `Bash(cd * && python -m *)`. A worker running
+  `cd <worktree> && python -m unittest ...` hit exactly that gap and,
+  rather than getting stuck, worked around it via `python3 -c` invoking
+  `unittest`'s loader API directly. The workaround produced a correct
+  result, but "found a way around a permission denial" isn't something
+  to leave standing as the expected path — it's the same reasoning as the
+  `git`/subprocess workarounds above: close the actual gap instead of
+  relying on an agent improvising past it, especially unattended. Fixed
+  by adding the missing `cd * &&` form; **whenever a new plain `Bash(...)`
+  allow rule is added, add its `cd * && ...` counterpart in the same
+  change**, not as a follow-up once something hits the gap.
 
 ## Validation protocol (tester agent)
 

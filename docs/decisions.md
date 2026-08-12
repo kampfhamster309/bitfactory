@@ -78,6 +78,15 @@ where a decision is expected to be reopened.
   way would have quietly reopened exactly the holes deny exists to close
   (force-push, hard reset, branch deletion, `rm -rf`, `sudo`). See
   [architecture.md](architecture.md#permission-configuration).
+- **`Bash(python -m *)` needed its own `Bash(cd * && python -m *)`
+  counterpart too** — it had been added without one, unlike `python3 *`,
+  so a worker running `cd <worktree> && python -m unittest ...` hit the
+  gap and worked around it (correctly, but via `python3 -c` instead of
+  the intended command) rather than getting stuck. Fixed, and noted as a
+  standing rule going forward: any new plain `Bash(...)` allow rule gets
+  its `cd * && ...` counterpart added in the same change, not
+  discovered later. See
+  [architecture.md](architecture.md#permission-configuration).
 
 ## Concurrency
 
