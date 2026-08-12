@@ -14,6 +14,21 @@ where a decision is expected to be reopened.
   deliberately left for later, staged as: Phase 0 fully interactive → Phase 1
   headless but manually triggered or scripted → final trigger design decided
   once the pipeline moves off the pure filesystem ticket store (Phase 4).
+- **Project-level agents (planner/tester) are only discovered when the
+  session/invocation is rooted at the target repo itself, not a parent
+  directory holding multiple projects.** Looked like a subagent-registration
+  bug during Phase 0's first walkthrough (`.claude/agents/planner.md`
+  wasn't showing up as an invokable agent type, even after a session
+  restart) — verified it was actually this: the session doing the
+  dispatching was rooted in bitfactory's own parent directory (developing
+  bitfactory and running it against the sandbox target side by side), not
+  in the target repo. A session rooted directly in the target repo picks
+  `planner`/`tester` up correctly. Not a design flaw, just an invocation
+  requirement — every orchestrator, interactive or Phase 1's headless
+  `claude -p`, must run with its working directory set to the target repo
+  root. Only relevant while bitfactory and a target repo are being
+  developed side by side, as they are now; dissolves once bitfactory itself
+  is finished and each run just operates on one target repo directly.
 
 ## Concurrency
 

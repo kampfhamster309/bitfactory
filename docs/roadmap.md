@@ -30,6 +30,11 @@ deferred to Phase 4, once there's an actual external ticket source to
 design it around. Still one ticket in flight at a time — this phase is
 about proving headless invocation works, not about parallelism yet.
 
+Every invocation (`claude -p` included) must run with its working
+directory set to the target repo root — `planner`/`tester` are project-level
+agents and aren't discovered otherwise (see
+[decisions.md](decisions.md#orchestration)).
+
 Note: if a high-priority ticket goes through this phase, its approval gate
 requires a PR review ([decisions.md](decisions.md#definition-of-done--human-gate)).
 Test runs in this phase target the local Gitea instance, not the `origin`
