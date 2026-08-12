@@ -1,0 +1,11 @@
+# OS / editor cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# git worktrees created for isolated worker agents (Phase 2+)
+/worktrees/
+
+# local logs / scratch, if any orchestrator script writes them here later
+*.log
