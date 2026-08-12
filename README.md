@@ -5,11 +5,13 @@ stories go into a backlog, and a pipeline of Claude Code agents (planner →
 workers → tester) plans, implements, tests, and merges them with as little
 human involvement as possible.
 
-Status: **design phase** — the pipeline itself (planner/tester agents
-driving tickets end to end) isn't running yet. See
-[docs/roadmap.md](docs/roadmap.md) for what "implemented" will mean at each
-phase. One piece of real tooling exists already: `scripts/ticket.py`, for
-filing/validating tickets before they land in `backlog/`.
+Status: **Phase 0 validated** — the planner/tester agents
+([agents/README.md](agents/README.md)) and `scripts/ticket.py` exist and
+have driven two tickets end to end against a sandbox target repo, one
+through the plain path and one through the PR-gated
+(`needs_manual_verification`) path. Still fully interactive/manual — no
+orchestrator loop yet. See [docs/roadmap.md](docs/roadmap.md) for what's
+next (Phase 1: headless invocation).
 
 ## Start here
 
@@ -34,7 +36,7 @@ backlog/       new tickets, not yet planned
 in_progress/   claimed by the planner, being implemented
 in_testing/    all subtasks merged, tester is validating
 done/          validated and merged
-agents/        agent-role documentation (planner/tester defs go here later)
+agents/        worker roster + symlinked planner/tester agent definitions
 docs/          planning docs (this is what you're reading)
 scripts/       ticket.py — file/validate tickets before they land in backlog/
 ```

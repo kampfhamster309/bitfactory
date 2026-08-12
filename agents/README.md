@@ -2,16 +2,21 @@
 
 Two different kinds of agent are involved, and they shouldn't be confused:
 
-## Factory-role agents (bitfactory-specific — not yet created)
+## Factory-role agents (bitfactory-specific)
 
-`planner` and `tester` are the only agents that need to understand
-bitfactory's ticket file format, directory state machine, and git branch
-conventions. They don't yet exist as concrete Claude Code agent definitions
-— that's the first real implementation task (see
-[../docs/roadmap.md](../docs/roadmap.md) Phase 0). They're expected to live
-as project-level agents, e.g. `.claude/agents/planner.md` and
-`.claude/agents/tester.md`, and to **delegate** actual implementation work to
-the worker roles below rather than writing code themselves.
+[`planner.md`](planner.md) and [`tester.md`](tester.md) — the only agents
+that need to understand bitfactory's ticket file format, directory state
+machine, and git branch conventions. They **delegate** actual
+implementation work to the worker roles below rather than writing code
+themselves. Verified working end to end during Phase 0 (two tickets, one
+through the plain path and one through the PR-gated path).
+
+Those two files are symlinks — the real, invokable definitions live at
+`.claude/agents/planner.md` and `.claude/agents/tester.md`, since that's
+where Claude Code discovers project-level agents from (and only when the
+session is rooted at this repo — see
+[../docs/decisions.md](../docs/decisions.md#orchestration)). The symlinks
+exist purely so they're not invisible sitting one level down.
 
 ## Worker agents (implementation — reuse what's installed)
 
