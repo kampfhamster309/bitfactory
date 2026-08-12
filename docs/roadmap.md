@@ -92,7 +92,20 @@ something actually demands it.
 
 **Exit criteria:** a ticket with 2+ independent subtasks completes with
 workers running concurrently, isolated from each other, with clean serial
-merges.
+merges. **Met** — twice interactively (once with disjoint files, once
+deliberately forcing a same-file conflict) and once headlessly (same
+conflict case, including surviving a clean mid-run interruption and
+resuming correctly on retry). The harder case — real conflict resolution,
+not just parallel scheduling on disjoint files — was specifically what
+this phase needed to prove and is now proven both ways.
+
+Two things adjacent to Phase 2 remain untested but aren't blockers for
+declaring it done: 3 concurrent subtasks (only 2 has been tried; unlikely
+to reveal much 1→2 didn't already), and a *true* crash recovery — a
+worktree left with genuinely uncommitted work, not just a clean stop
+after a completed step. That belongs with the bug loop and retry-cap
+escalation as a general pipeline-resilience gap, not something specific
+to this phase's parallelism claim.
 
 ## Phase 3 — Multiple tickets in flight, priority-aware
 

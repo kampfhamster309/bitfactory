@@ -9,15 +9,16 @@ user stories flow into `backlog/` as tickets, and a pipeline of Claude Code
 agents (planner → workers → tester) plans, implements, tests, and merges
 them with as little human involvement as possible.
 
-**Current status: Phase 1 validated.** The planner/tester agents
+**Current status: Phase 2 validated.** The planner/tester agents
 (`.claude/agents/`, also symlinked into `agents/` for visibility) and the
-ticket-filing helper (`scripts/ticket.py`) have driven four tickets end to
+ticket-filing helper (`scripts/ticket.py`) have driven seven tickets end to
 end against a sandbox target repo — plain, PR-gated
-(`needs_manual_verification`), and, as of the most recent ticket, a fully
-unattended headless (`claude -p --permission-mode dontAsk`) run with zero
-human intervention, including the push. See `docs/roadmap.md` for what's
-next (Phase 2: worker parallelism); don't assume tooling exists beyond
-what's referenced below.
+(`needs_manual_verification`), fully unattended headless
+(`claude -p --permission-mode dontAsk`), and real concurrent worker
+dispatch, including two tickets that deliberately forced a same-file merge
+conflict (resolved correctly both interactively and headlessly). See
+`docs/roadmap.md` for what's next (Phase 3: multiple tickets in flight);
+don't assume tooling exists beyond what's referenced below.
 
 ## Read this first, in order
 
