@@ -46,6 +46,8 @@
       "Bash(python -m *)",
       "Bash(cd * && python -m *)",
 
+      "Bash(ln -s *)",
+
       "Bash(tea *)",
       "Bash(curl https://YOUR-GIT-FORGE-HOST/*)",
 

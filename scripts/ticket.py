@@ -18,6 +18,9 @@ Usage:
         --bug-of 01J8Z3K9F7-add-csv-export \\
         --story "..." --criteria "..."
 
+    scripts/ticket.py new --title "Frontend UI" --priority medium \\
+        --depends-on 01J8Z3K9F7-backend-api --story "..." --criteria "..."
+
     scripts/ticket.py new   # interactive, prompts for everything
 
     scripts/ticket.py validate backlog/01J8Z3K9F7-add-csv-export.md
@@ -80,8 +83,10 @@ def render_ticket(
     retry_count: int,
     story: str,
     criteria: list[str],
+    depends_on: list[str] | None = None,
 ) -> str:
     bug_of_val = "null" if bug_of is None else bug_of
+    depends_on = depends_on or []
     lines = [
         "---",
         f"id: {ticket_id}",
@@ -93,6 +98,7 @@ def render_ticket(
         f"retry_count: {retry_count}",
         "feature_branch: null",
         "subtasks: []",
+        f"depends_on: [{', '.join(depends_on)}]   # ticket ids that must be status: done before this can be claimed",
         "needs_manual_verification: false   # set true if any criterion below is tagged (manual)",
         "pr_url: null              # set by tester when it opens a PR",
         "---",
@@ -120,10 +126,17 @@ def render_ticket(
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n(.*)\Z", re.DOTALL)
 
 
-def parse_ticket(text: str) -> tuple[dict[str, str], str]:
-    """Minimal parser for this tool's own fixed schema. Raises ValueError
-    if the file doesn't look like a not-yet-planned ticket (this tool only
-    handles the backlog stage, where subtasks is always [])."""
+def parse_ticket(text: str, *, require_unplanned: bool = False) -> tuple[dict[str, str], str]:
+    """Minimal parser for this tool's own fixed schema.
+
+    By default this parses a ticket from any stage, including an already-
+    `done` one with planner-populated subtasks (needed by --bug-of's
+    retry-count lookup and by dependency checking, both of which routinely
+    read completed tickets). Pass require_unplanned=True (validate_content's
+    own use) to additionally enforce that subtasks is still the untouched
+    `[]` a fresh backlog-stage ticket should have -- catches a ticket sitting
+    in backlog/ that's inconsistently already been planned.
+    """
     m = FRONTMATTER_RE.match(text)
     if not m:
         raise ValueError("no --- frontmatter block found")
@@ -138,7 +151,7 @@ def parse_ticket(text: str) -> tuple[dict[str, str], str]:
         key, _, rest = line.partition(":")
         key = key.strip()
         value = rest.split("#", 1)[0].strip()
-        if key == "subtasks" and value != "[]":
+        if require_unplanned and key == "subtasks" and value != "[]":
             raise ValueError(
                 "ticket already has planner-populated subtasks; this tool "
                 "only creates/validates backlog-stage tickets"
@@ -147,10 +160,23 @@ def parse_ticket(text: str) -> tuple[dict[str, str], str]:
     return fields, body
 
 
+def parse_id_list(value: str) -> list[str]:
+    """Parse a compact flow-style YAML list like '[]' or '[a, b, c]' --
+    the format depends_on is rendered/read in, matching this file's
+    stdlib-only, no-real-YAML-parser design."""
+    value = value.strip()
+    if not (value.startswith("[") and value.endswith("]")):
+        raise ValueError(f"expected a flow-style list like [] or [a, b], got {value!r}")
+    inner = value[1:-1].strip()
+    if not inner:
+        return []
+    return [item.strip() for item in inner.split(",")]
+
+
 def validate_content(text: str, filename: str) -> list[str]:
     errors: list[str] = []
     try:
-        fields, body = parse_ticket(text)
+        fields, body = parse_ticket(text, require_unplanned=True)
     except ValueError as e:
         return [str(e)]
 
@@ -181,6 +207,17 @@ def validate_content(text: str, filename: str) -> list[str]:
 
     if fields.get("feature_branch") != "null":
         errors.append("feature_branch must be null before planning")
+
+    try:
+        depends_on = parse_id_list(fields.get("depends_on", "[]"))
+    except ValueError as e:
+        errors.append(f"depends_on: {e}")
+        depends_on = []
+    for dep_id in depends_on:
+        if dep_id == fields.get("id"):
+            errors.append(f"depends_on lists this ticket's own id ({dep_id!r}) -- a ticket can't depend on itself")
+        elif find_ticket_by_id(dep_id) is None:
+            errors.append(f"depends_on references {dep_id!r}, which doesn't exist as a ticket anywhere")
 
     if fields.get("needs_manual_verification") not in ("false", "true"):
         errors.append("needs_manual_verification must be true or false")
@@ -290,6 +327,7 @@ def cmd_new(args: argparse.Namespace) -> int:
         retry_count=retry_count,
         story=args.story,
         criteria=args.criteria,
+        depends_on=args.depends_on,
     )
 
     filename = f"{ticket_id}.md"
@@ -323,10 +361,32 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
+def dependencies_met(depends_on: list[str]) -> bool:
+    """A dependency is met only by a ticket sitting in done/ with
+    status: done -- literal presence in done/ isn't enough, since a
+    failed ticket also ends up there with status: superseded (see
+    tester.md's "On fail"). If the depended-on ticket was superseded,
+    its replacement bug_ lineage is what would actually need to reach
+    done/ itself; this function doesn't walk that chain, it only checks
+    the literal id given -- see decisions.md for this known limitation."""
+    for dep_id in depends_on:
+        dep_path = REPO_ROOT / "done" / f"{dep_id}.md"
+        if not dep_path.exists():
+            return False
+        try:
+            dep_fields, _ = parse_ticket(dep_path.read_text())
+        except ValueError:
+            return False
+        if dep_fields.get("status") != "done":
+            return False
+    return True
+
+
 def cmd_next(args: argparse.Namespace) -> int:
     """Pick which backlog/ ticket to claim next: highest priority first,
-    FIFO (by ULID creation order) within the same priority. Respects the
-    ticket concurrency cap by checking in_progress/'s current size.
+    FIFO (by ULID creation order) within the same priority, among tickets
+    whose depends_on entries are all satisfied (status: done). Respects
+    the ticket concurrency cap by checking in_progress/'s current size.
 
     Deliberately does NOT do the cross-ticket conflict check
     (architecture.md#cross-ticket-conflict-avoidance) -- that compares a
@@ -342,18 +402,32 @@ def cmd_next(args: argparse.Namespace) -> int:
             f"in_progress/ (cap: {args.cap}); nothing to claim right now"
         )
 
+    backlog_paths = list((REPO_ROOT / "backlog").glob("*.md"))
+
     priority_rank = {p: i for i, p in enumerate(PRIORITIES)}
     candidates: list[tuple[int, str, Path]] = []
-    for path in (REPO_ROOT / "backlog").glob("*.md"):
+    for path in backlog_paths:
         try:
             fields, _ = parse_ticket(path.read_text())
         except ValueError as e:
             print(f"warning: skipping unparseable ticket {path.name}: {e}", file=sys.stderr)
             continue
+        try:
+            depends_on = parse_id_list(fields.get("depends_on", "[]"))
+        except ValueError as e:
+            print(f"warning: skipping ticket {path.name} with malformed depends_on: {e}", file=sys.stderr)
+            continue
+        if not dependencies_met(depends_on):
+            continue
         rank = priority_rank.get(fields.get("priority"), -1)
         candidates.append((rank, path.name, path))
 
     if not candidates:
+        if backlog_paths:
+            sys.exit(
+                "error: backlog/ has tickets, but none are eligible yet -- "
+                "all have unmet depends_on entries"
+            )
         sys.exit("error: backlog/ is empty -- nothing to claim")
 
     candidates.sort(key=lambda c: (-c[0], c[1]))
@@ -374,6 +448,10 @@ def main() -> int:
     p_new.add_argument("--bug-of", help="original ticket id, if this is a bug report")
     p_new.add_argument("--retry-count", type=int, help="override; default is looked up from --bug-of + 1")
     p_new.add_argument("--source", choices=SOURCES, help="default: human, or bug-loop if --bug-of is set")
+    p_new.add_argument(
+        "--depends-on", action="append", dest="depends_on",
+        help="ticket id that must be status: done before this can be claimed; repeat for multiple",
+    )
     p_new.set_defaults(func=cmd_new)
 
     p_val = sub.add_parser("validate", help="validate an existing ticket file")

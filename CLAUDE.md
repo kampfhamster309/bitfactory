@@ -49,16 +49,18 @@ sources); don't assume tooling exists beyond what's referenced below.
 - `scripts/ticket.py new [flags | interactive]` — file a new ticket into
   `backlog/`: generates the collision-safe ULID id, fills out frontmatter,
   self-validates before writing. `--bug-of <ticket-id>` for bug tickets
-  (auto-computes `retry_count`). Run with `--help` for all flags; omit
-  flags to be prompted interactively.
+  (auto-computes `retry_count`). `--depends-on <ticket-id>` (repeatable)
+  to declare a real dependency on another ticket. Run with `--help` for
+  all flags; omit flags to be prompted interactively.
 - `scripts/ticket.py validate <path>` — check an existing ticket file
   against the same rules; non-zero exit on failure. Stdlib-only (no venv/
   install step) — this is the only tooling in the repo so far.
 - `scripts/ticket.py next [--cap N]` — pick which `backlog/` ticket to
   claim next: highest priority first, FIFO within the same priority,
-  respecting the `in_progress/` cap (default 3). Non-zero exit if nothing's
-  claimable (backlog empty or at capacity) — check the exit code before
-  assuming stdout has a path.
+  among tickets whose `depends_on` are all `status: done`, respecting the
+  `in_progress/` cap (default 3). Non-zero exit if nothing's claimable
+  (backlog empty, all blocked, or at capacity) — check the exit code
+  before assuming stdout has a path.
 
 ## Invariants that must not be violated when implementing this
 

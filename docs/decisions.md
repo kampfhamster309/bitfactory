@@ -99,6 +99,34 @@ where a decision is expected to be reopened.
   ticket was handed to the orchestrator explicitly by name; there was no
   actual selection logic anywhere despite priority being part of the
   ticket schema since v1.
+- **`depends_on: []` on the ticket schema, filtered by `scripts/ticket.py
+  next`.** Priority alone can't express "ticket B can't start until
+  ticket A's API contract is real" — a real gap, hit while filing a
+  small multi-ticket project (a Flask backend + TypeScript frontend)
+  where the tickets had genuine dependencies, not just varying urgency.
+  Set at filing time (`--depends-on <id>`, repeatable); `next` skips any
+  backlog ticket whose dependencies aren't all `status: done` in `done/`
+  (not merely present there — a superseded/failed ticket also ends up in
+  `done/`, and doesn't count). The planner re-checks this itself during
+  Job A too, same reasoning as the existing conflict-hold re-check.
+  Known limitation, not solved for v1: this is a literal id match, so a
+  superseded dependency permanently blocks its dependents rather than
+  transferring to whatever `bug_` ticket replaced it. See
+  [architecture.md](architecture.md#ticket-id-and-file-format).
+- **Found and fixed while building `depends_on`: `parse_ticket()` had a
+  latent bug that made the existing `--bug-of` retry-count auto-lookup
+  silently broken against any real, already-`done` original ticket** —
+  its subtasks-guard raised on any populated (non-`[]`) `subtasks:`
+  field, which every ticket that's actually reached `done/` has, but the
+  only prior test of that lookup used a still-`backlog` ticket, so this
+  never surfaced. Fixed by making the guard opt-in
+  (`parse_ticket(text, require_unplanned=True)`, used only by
+  `validate_content`'s backlog-stage check) rather than baked into every
+  call, since the new dependency check also needs to read arbitrary
+  `done/` tickets without erroring on their populated subtasks. Verified
+  both the fix and the original `--bug-of` path against a real
+  populated-subtasks `done` ticket in a sandbox before touching the real
+  target repo.
 - **No separate token/cost budget per ticket for v1** — the retry cap (below)
   is the only cost bound for now. *Revisit when:* Phase 0 shows what a real
   ticket actually costs, or a ticket burns unexpectedly high cost without
@@ -185,6 +213,18 @@ where a decision is expected to be reopened.
   commands, no unrestricted network access, writes scoped to the worker's
   own worktree. Loosened deliberately per-role only if a specific worker
   genuinely needs more, not as a blanket default.
+- **The planner symlinks locally-provisioned, gitignored directories
+  (a Python `.venv/`, etc.) into every new worktree it creates.** Found
+  during the first backend ticket with a real dependency (Flask, via a
+  provisioned `.venv/`): worktrees don't inherit gitignored content from
+  the main checkout at all, so a worker and the tester each independently
+  improvised a different workaround for the same missing `.venv` — one
+  hand-copying packages, one symlinking on its own. Fixed at the source
+  instead: the planner symlinks it in right after `git worktree add`, so
+  every worktree just has it, and downstream commands keep using the same
+  relative path (`.venv/bin/python`) that already worked at the repo
+  root — no absolute paths, no new permission rules needed. See
+  [architecture.md](architecture.md#worktrees-and-locally-provisioned-environments).
 
 ## Observability
 

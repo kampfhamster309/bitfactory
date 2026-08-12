@@ -56,6 +56,7 @@ bug_of: null              # ticket id this bug was filed against, if any
 retry_count: 0            # bumped each time the bug loop re-files this lineage
 feature_branch: null      # set by planner
 subtasks: []               # populated by planner, see below
+depends_on: []             # ticket ids that must be status: done before this can be claimed
 needs_manual_verification: false   # true if any criterion below is tagged (manual)
 pr_url: null              # set by tester when it opens a PR; the signal an open,
                           # unresolved PR exists for the cross-ticket conflict check
@@ -78,6 +79,24 @@ As a ..., I want ..., so that ...
   *untagged* criterion it genuinely can't verify itself — the planner's
   pass is best-effort, not the only chance to catch this
   ([decisions.md](decisions.md#definition-of-done--human-gate)).
+
+- **`depends_on:`** — a flow-style list of ticket ids (`[]` when there are
+  none), set at filing time via `scripts/ticket.py new --depends-on <id>`
+  (repeatable). `scripts/ticket.py next` filters out any backlog ticket
+  whose `depends_on` isn't fully satisfied — satisfied means a ticket
+  with that exact id sits in `done/` with `status: done`, not merely
+  present in `done/`: a *failed* ticket also ends up in `done/`, but with
+  `status: superseded` (see [decisions.md](decisions.md#failure-handling)),
+  which does not count. The planner re-checks this itself during Job A
+  before claiming, the same defense-in-depth reasoning as the
+  cross-ticket conflict hold below — `next` already filtered, but a
+  ticket could in principle be handed to the planner directly rather than
+  picked via `next`. **Known limitation:** this is a literal id match,
+  not a lineage match — if a depended-on ticket gets superseded and
+  replaced by a `bug_` ticket, anything depending on the original id
+  stays permanently blocked rather than automatically transferring to the
+  replacement. Not solved for v1; revisit if it turns out to matter in
+  practice.
 
 - **`subtasks:` entry shape** (added by the planner during planning):
 
@@ -178,6 +197,42 @@ decomposing a ticket, and should say so explicitly in each subtask's
 description so the assigned worker doesn't default to the repo root out
 of habit. The tester's mechanical check ([below](#validation-protocol-tester-agent))
 needs to know the same convention to find and run the right test command.
+
+## Worktrees and locally-provisioned environments
+
+A git worktree only gives you the repo's *tracked* content — anything
+gitignored (a Python `.venv/`, `node_modules/`, and similarly for other
+stacks) exists solely in whichever checkout it was created in, and isn't
+copied or linked into new worktrees automatically. This matters because a
+worktree's whole purpose in this pipeline is worker/tester isolation
+([Git branching model](#git-branching-model) above) — but it means a
+locally-provisioned environment set up once at the repo root (a venv,
+`npm install`'s `node_modules/`, etc. — the same category of one-time,
+outside-of-ticket-work environment setup as the workspace-trust and
+credential-helper fixes, see [decisions.md](decisions.md#orchestration))
+is invisible from inside every worktree by default.
+
+Found this the concrete way: a worker in one worktree hit a missing
+`.venv` and hand-copied packages into a local one to work around it; the
+tester, in a different worktree, independently found and used a symlink
+instead. Different agents solving the same gap two different ways is
+exactly the outcome the earlier `cd`/`-C`/prefix-matching fixes were
+trying to prevent elsewhere — the fix belongs at the point the worktree is
+created, not left for whoever hits the gap first to improvise around.
+
+**Fix:** the planner symlinks any such locally-provisioned directory
+into each new worktree right after creating it (both the integration
+worktree and every subtask worktree) —
+`ln -s "$(pwd)/.venv" "<worktree-path>/.venv"` (see `planner.md` Job A).
+This is deliberately a *symlink into the existing environment*, not a
+fresh install per worktree: reinstalling dependencies per worktree would
+work too, but wastes time and disk for something the root checkout
+already has, and risks a subtly different environment per worktree if a
+`pip install`/`npm install` run behaves even slightly differently each
+time. After symlinking, every command inside a worktree can use the same
+relative path (`.venv/bin/python`, etc.) that already works at the repo
+root — no absolute paths or special-cased commands needed downstream, and
+no new permission rules beyond the existing relative-path ones.
 
 ## Concurrency and locking
 

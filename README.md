@@ -55,7 +55,8 @@ prompts — run `scripts/ticket.py new --help` for the flags) rather than
 writing the file by hand: it generates the collision-safe ULID-prefixed id,
 fills out the frontmatter correctly, and self-validates before writing into
 `backlog/`. Bug tickets use `--bug-of <original-ticket-id>`, which also
-auto-computes `retry_count` from the original.
+auto-computes `retry_count` from the original. Real dependencies on
+another ticket use `--depends-on <ticket-id>` (repeatable).
 
 `scripts/ticket.py validate <path>` checks an existing (e.g. hand-edited)
 ticket file against the same rules. [docs/ticket-template.md](docs/ticket-template.md)

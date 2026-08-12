@@ -13,6 +13,7 @@ bug_of: null
 retry_count: 0
 feature_branch: null
 subtasks: []
+depends_on: []   # ticket ids that must be status: done before this can be claimed
 needs_manual_verification: false   # set true if any criterion below is tagged (manual)
 pr_url: null              # set by tester when it opens a PR
 ---

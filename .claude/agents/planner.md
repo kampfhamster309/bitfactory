@@ -19,7 +19,19 @@ Given a ticket path in `backlog/`:
 1. Confirm you're on the trunk branch (`main`) with a clean working tree
    before starting. If not, stop and report the problem instead of
    proceeding.
-2. **Check for a conflict hold before claiming.** List tickets in
+2. **Check `depends_on` before claiming.** If the ticket's `depends_on`
+   is non-empty, confirm each listed id actually sits in `done/` with
+   `status: done` — presence in `done/` alone isn't enough, a
+   superseded/failed ticket also ends up there. `scripts/ticket.py next`
+   already filters this, so it should rarely fire if you were handed a
+   ticket via `next`, but re-verify yourself rather than trusting the
+   invocation blindly — the same reasoning as the conflict-hold check
+   below, in case a ticket was handed to you directly instead. If any
+   dependency is unmet: **hold** — leave the ticket in `backlog/`
+   untouched, append a Log entry naming the unmet dependency, commit that
+   note on `main`, and stop here; report the hold instead of proceeding.
+   Otherwise continue.
+3. **Check for a conflict hold before claiming.** List tickets in
    `in_testing/` with `pr_url` set (not `null`) — these are gated tickets
    actually waiting on human PR review, an unbounded wait, unlike an
    ordinary `in_testing/` ticket the tester is still actively validating.
@@ -31,11 +43,11 @@ Given a ticket path in `backlog/`:
    `backlog/` untouched (don't claim it), append a Log entry naming which
    open PR it conflicts with, commit that note on `main`, and stop here;
    report the hold instead of proceeding. Otherwise continue.
-3. `git mv backlog/<file> in_progress/<file>` — the claim must happen via
+4. `git mv backlog/<file> in_progress/<file>` — the claim must happen via
    `git mv` so history shows the move; this is this repo's equivalent of
    the atomic-rename lock.
-4. Read the ticket's user story and acceptance criteria.
-5. Decompose the work into subtasks. Scope each one to non-overlapping
+5. Read the ticket's user story and acceptance criteria.
+6. Decompose the work into subtasks. Scope each one to non-overlapping
    files/modules where you reasonably can, but don't over-engineer around
    unavoidable overlap — overlapping subtasks are allowed to run in
    parallel; conflicts get resolved during integration (Job B), not
@@ -44,37 +56,52 @@ Given a ticket path in `backlog/`:
    for a Python target repo, that stack's own idiomatic equivalent
    otherwise) — don't leave the worker to default to the repo root out of
    habit.
-6. For each subtask, pick exactly one `assigned_role` from the roster in
+7. For each subtask, pick exactly one `assigned_role` from the roster in
    `agents/README.md`. If nothing in that roster genuinely fits, don't
    improvise from the full plugin catalog — say so explicitly in the
    ticket's Log and flag it for a human instead of guessing.
-7. Review the acceptance criteria for anything no agent can verify
+8. Review the acceptance criteria for anything no agent can verify
    mechanically — typically something visual/interactive, like a GUI
    actually rendering or a layout looking right. Tag each such criterion
    inline with `(manual)`. This is a best-effort pass, not the only chance
    to catch this — the tester can flag an untagged criterion later too.
-8. Update the ticket's frontmatter:
+9. Update the ticket's frontmatter:
    - `status: in_progress`
    - `feature_branch: feature/<ticket-id>`
    - `subtasks:` — one entry per subtask: `id`, `description`,
      `assigned_role`, `branch: subtask/<ticket-id>/<n>`,
      `status: pending`, `worktree: null`, `merged: false`
    - `needs_manual_verification: true` if you tagged any criterion in step
-     7, otherwise leave it `false`
-9. Append a timestamped `## Log` entry summarizing the decomposition and
-   assignments.
-10. Commit the claim + plan on `main`:
+     8, otherwise leave it `false`
+10. Append a timestamped `## Log` entry summarizing the decomposition and
+    assignments.
+11. Commit the claim + plan on `main`:
     `git add -A && git commit -m "planner: claim and plan <ticket-id>"`.
-11. Create the feature branch, and an integration worktree for it that the
+12. Create the feature branch, and an integration worktree for it that the
     tester will later reuse:
     - `git branch feature/<ticket-id> main`
     - `git worktree add worktrees/<ticket-id>/integration feature/<ticket-id>`
-12. For each subtask (**not** nested under `feature/<ticket-id>` — git
+13. For each subtask (**not** nested under `feature/<ticket-id>` — git
     refs can't be both a leaf and a directory prefix, so this must be a
     separate top-level namespace):
     - `git branch subtask/<ticket-id>/<n> feature/<ticket-id>`
     - `git worktree add worktrees/<ticket-id>/subtask-<n> subtask/<ticket-id>/<n>`
-13. Report back: the ticket id, the feature branch, and for each subtask
+14. **If the target repo has a locally-provisioned, untracked environment
+    directory** (a Python `.venv/`, or similar — check for one at the
+    repo root; it won't be in `git status` since it's gitignored) **,
+    symlink it into every worktree just created** (both the integration
+    one and each subtask one): `ln -s "$(pwd)/.venv" "<worktree-path>/.venv"`.
+    Worktrees don't inherit gitignored/untracked files from the main
+    checkout — only tracked content — so without this, a worker or tester
+    operating inside a worktree finds no `.venv` at all and has to
+    improvise (found this happening inconsistently — one worker hand-
+    copied packages, the tester used a different one-off symlink — rather
+    than there being one correct, always-available path). Doing this once
+    per worktree here means every later command inside it can just use
+    the ordinary relative `.venv/bin/python`, matching what already works
+    at the repo root — no absolute paths or special-cased commands needed
+    downstream.
+15. Report back: the ticket id, the feature branch, and for each subtask
     its `assigned_role` and worktree path — this is what the orchestrator
     uses to dispatch each worker into its own worktree.
 
