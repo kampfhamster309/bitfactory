@@ -99,9 +99,11 @@ around them instead of discovering them mid-implementation:
    long-term goal, but starting there means the first bug is discovered by
    whatever's downstream of `done/`. v1 makes the human gate a config
    option that gets relaxed as trust in the pipeline grows, rather than
-   being absent by default. (Resolved: priority-based — high-priority
-   tickets require PR approval on the local Gitea instance (for now),
-   low/medium go dark automatically. See
+   being absent by default. (Resolved: two independent triggers — priority
+   and testability. High-priority tickets, and any ticket with an
+   acceptance criterion no agent can verify mechanically, require PR
+   approval on the local Gitea instance (for now); everything else goes
+   dark automatically. See
    [decisions.md](decisions.md#definition-of-done--human-gate).)
 
 None of these are reasons not to build this — they're the reason to design
@@ -133,9 +135,10 @@ question remains genuinely open — see
    moves the ticket into `in_testing/`, runs the full test suite on the
    feature branch, and separately judges the result against the original
    acceptance criteria.
-   - Pass → ticket moves to `done/` automatically for low/medium priority;
-     high-priority tickets wait for PR approval on the local Gitea instance
-     first (see
+   - Pass → ticket moves to `done/` automatically, unless it's
+     high-priority or has an acceptance criterion no agent can verify
+     mechanically — either one means it waits for PR approval on the local
+     Gitea instance first (see
      [decisions.md](decisions.md#definition-of-done--human-gate)).
    - Fail → a new `bug_`-prefixed ticket is filed in `backlog/`, referencing
      the original ticket and a retry count; after 3 failed attempts on one

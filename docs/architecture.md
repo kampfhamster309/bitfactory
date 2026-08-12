@@ -24,7 +24,7 @@ stateDiagram-v2
     backlog --> in_progress: planner claims ticket,\ncreates feature branch,\nwrites plan + assignments
     in_progress --> in_progress: workers finish subtasks,\nplanner merges each\nsub-branch serially
     in_progress --> in_testing: all subtasks merged
-    in_testing --> done: full suite passes AND\nacceptance criteria met\n(+ PR approval if priority=high)
+    in_testing --> done: full suite passes AND\nacceptance criteria met\n(+ PR approval if priority=high\nor needs_manual_verification)
     in_testing --> backlog: failure → new bug_ ticket\n(references original, retry count++)
     done --> [*]
 ```
@@ -56,6 +56,9 @@ bug_of: null              # ticket id this bug was filed against, if any
 retry_count: 0            # bumped each time the bug loop re-files this lineage
 feature_branch: null      # set by planner
 subtasks: []               # populated by planner, see below
+needs_manual_verification: false   # true if any criterion below is tagged (manual)
+pr_url: null              # set by tester when it opens a PR; the signal an open,
+                          # unresolved PR exists for the cross-ticket conflict check
 ---
 
 ## User story
@@ -63,8 +66,18 @@ As a ..., I want ..., so that ...
 
 ## Acceptance criteria
 - [ ] ...
-- [ ] ...
+- [ ] The main window opens and displays the dashboard layout correctly (manual)
 ```
+
+- **`(manual)` tag on an acceptance criterion:** marks a criterion no agent
+  can check mechanically — typically something visual/interactive (a GUI
+  actually rendering, layout looking right) rather than a property a test
+  can assert. The planner tags these while decomposing the ticket; if any
+  criterion is tagged, `needs_manual_verification` is set `true` in the
+  frontmatter. The tester can also set it `true` later if it finds an
+  *untagged* criterion it genuinely can't verify itself — the planner's
+  pass is best-effort, not the only chance to catch this
+  ([decisions.md](decisions.md#definition-of-done--human-gate)).
 
 - **`subtasks:` entry shape** (added by the planner during planning):
 
@@ -117,6 +130,44 @@ subtasks:
   whole backlog at once. Configurable, not hardcoded — 3 is the v1 default.
 - **Subtask concurrency cap: 3.** At most 3 worker agents running in
   parallel on a single ticket, same reasoning.
+
+## Cross-ticket conflict avoidance
+
+The planner's conflict handling above covers subtasks *within* one ticket,
+resolved quickly during that ticket's own integration step. It doesn't
+cover a different risk: a ticket gated at the [human gate](#human-gate)
+(`priority: high` or `needs_manual_verification: true`) can sit in
+`in_testing/` for an unbounded, human-dependent amount of time with its
+feature branch not yet merged into `main`. Other tickets can keep landing
+on `main` during that wait, raising the odds that the gated branch is hard
+— or silently wrong — to merge once it's finally approved
+([decisions.md](decisions.md#git-and-merging)).
+
+Before claiming a new ticket (Job A, step 2 in the planner), the planner
+checks for this:
+
+1. Find tickets in `in_testing/` with `pr_url` set (not `null`) — these are
+   the ones actually waiting on human review; an ordinary `in_testing/`
+   ticket the tester is still actively validating isn't a concern, since
+   that resolves within one tester pass, not an open-ended wait.
+2. For each one, get its exact touched-files list:
+   `git diff main...<its feature_branch> --name-only`.
+3. Compare that list against the new ticket's user story for plausible
+   overlap (mentioned file paths, module/feature names). This is
+   necessarily a heuristic — the new ticket hasn't been decomposed yet, so
+   its own touched files aren't known — but the open PR's file list is
+   exact, which is the useful half of the comparison.
+4. If overlap looks likely: **hold** the new ticket. Leave it in
+   `backlog/` (don't claim it), append a Log entry naming which open PR it
+   conflicts with, and commit that note on `main`. No overlap, or no
+   PR-gated tickets currently open: claim proceeds normally.
+
+This isn't a guarantee — it reduces the odds of a bad stale conflict, it
+doesn't replace the existing "resolved at merge time" policy for whatever
+still slips through. There's no separate polling loop for this yet: the
+hold is simply re-evaluated the next time the planner is invoked to claim
+that ticket, whatever triggers that (see
+[open-questions.md](open-questions.md#orchestrator-trigger-mechanism)).
 
 ## Crash recovery
 
@@ -187,7 +238,11 @@ pass/fail:
 2. **Judgment:** re-read the original user story and acceptance criteria and
    assess whether the merged result actually satisfies them — a green suite
    doesn't by itself prove this, especially for acceptance criteria that
-   weren't turned into an automated test.
+   weren't turned into an automated test. If a criterion turns out to be
+   something the tester genuinely can't verify itself, even though it
+   wasn't tagged `(manual)` at planning time, it sets
+   `needs_manual_verification: true` rather than guessing at a pass/fail —
+   this is what routes the ticket through PR review regardless of priority.
 
 Both must pass for the ticket to move to `done/`. A failure in either
 produces a `bug_` ticket describing which check failed and why.
@@ -204,23 +259,35 @@ produces a `bug_` ticket describing which check failed and why.
 
 ## Human gate
 
-`in_testing/ → done/` uses a **priority-based gate**
-([decisions.md](decisions.md#definition-of-done--human-gate)):
-- **High-priority tickets** require human approval before moving to `done/`.
-- **Low- and medium-priority tickets** go straight to `done/` automatically
-  once the full suite passes and acceptance criteria are judged met.
+`in_testing/ → done/` uses a gate with **two independent triggers**
+([decisions.md](decisions.md#definition-of-done--human-gate)) — either one
+routes the ticket through PR review instead of straight to `done/`:
+- **Priority:** `priority: high`.
+- **Testability:** `needs_manual_verification: true` — the ticket has at
+  least one acceptance criterion no agent can check mechanically (see the
+  `(manual)` tag convention above).
+
+These are deliberately kept separate rather than folded into priority: a
+routine, low-priority UI tweak can still need a human to actually look at
+it, without that forcing its priority up just to get reviewed. **Low- and
+medium-priority tickets with no `(manual)` criteria** go straight to
+`done/` automatically once the full suite passes and acceptance criteria
+are judged met.
 
 Approval happens via **PR/MR review on a git forge**: the ticket's feature
 branch is pushed and opened as a PR, and approval means the PR is
-approved/merged. For Phase 0/1, this targets the **local Gitea instance**
-(self-hosted on the Unraid server) rather than the `origin` GitHub remote —
-an unattended run's PR-opening/merging can't touch the real repo while the
-pipeline is still unproven. GitHub becomes the target once the pipeline has
-earned that. Either way, **a git-forge remote is needed as soon as any
-high-priority ticket reaches `in_testing/`** — worth remembering even in
-Phase 0, since this dependency arrives earlier than the GitHub *intake*
-integration work planned for Phase 4 (a separate concern from using a forge
-for this approval step).
+approved/merged. The PR description states *why* it's gated — priority,
+manual-verification criteria (quoted directly, so the human knows exactly
+what to go check — e.g. "confirm the main window opens and the dashboard
+layout looks right"), or both. For Phase 0/1, this targets the **local
+Gitea instance** (self-hosted on the Unraid server) rather than the
+`origin` GitHub remote — an unattended run's PR-opening/merging can't touch
+the real repo while the pipeline is still unproven. GitHub becomes the
+target once the pipeline has earned that. Either way, **a git-forge remote
+is needed as soon as any gated ticket reaches `in_testing/`** — worth
+remembering even in Phase 0, since this dependency arrives earlier than the
+GitHub *intake* integration work planned for Phase 4 (a separate concern
+from using a forge for this approval step).
 
 There is no earlier gate in v1 — the planner's subtask breakdown is not
 reviewed before workers start; only this end gate exists.

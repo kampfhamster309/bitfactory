@@ -67,11 +67,22 @@ those docs first:
 - **Retry cap: 3.** A ticket lineage (original + its `bug_` descendants)
   gets 3 validation failures before the tester escalates to `needs_human/`
   instead of filing another `bug_` ticket.
-- **Approval gate is priority-based:** high-priority tickets require PR
-  review before `in_testing/ → done/`; low/medium go dark automatically.
-  Approval currently targets the **local Gitea instance**, not the `origin`
-  GitHub remote — don't point PR-approval flows at `origin` until the
-  pipeline has earned that (see `decisions.md`).
+- **Approval gate has two independent triggers:** `priority: high`, or a
+  ticket with `needs_manual_verification: true` (any acceptance criterion
+  tagged `(manual)` — something no agent can check mechanically, e.g. a GUI
+  actually rendering correctly). Either one routes through PR review
+  instead of straight to `done/`; don't conflate the two by forcing
+  priority up just to get a manual-verification ticket reviewed. Approval
+  currently targets the **local Gitea instance**, not the `origin` GitHub
+  remote — don't point PR-approval flows at `origin` until the pipeline has
+  earned that (see `decisions.md`).
+- **The planner holds new tickets that look likely to conflict with an open
+  PR.** Before claiming a ticket, it checks `in_testing/` tickets with
+  `pr_url` set (gated, awaiting human review — an unbounded wait, unlike
+  ordinary in-flight tickets) and compares their exact touched-files list
+  against the new ticket's story. Likely overlap → leave it in `backlog/`
+  and log why, rather than claim it (see `architecture.md`'s
+  "Cross-ticket conflict avoidance").
 - **Workers run under tight guardrails by default:** allowlisted Bash, no
   unrestricted network, writes scoped to their own worktree. Only the
   planner and tester ever need the git-forge token, and it must never be

@@ -29,22 +29,34 @@ Given a ticket id whose subtasks are all merged:
    merged result actually satisfies it and check it off (`- [x]`) with a
    one-line justification in the Log if it's not obvious from an automated
    test. A green suite is not by itself proof of this — treat the two
-   checks as independent.
+   checks as independent. If you hit a criterion you genuinely can't verify
+   yourself — even one the planner didn't tag `(manual)` — don't guess at
+   pass/fail: tag it `(manual)` yourself and set
+   `needs_manual_verification: true` in the frontmatter if it isn't already.
 5. Both checks must pass for the ticket to pass overall.
 
 ## On pass
 
-- **Low/medium priority:** merge `feature/<ticket-id>` into `main`
+The gate has two independent triggers — check both, not just priority:
+`priority == high`, or `needs_manual_verification == true` (set by the
+planner, or by you in step 4 above). Either one routes through PR review.
+
+- **Neither trigger set:** merge `feature/<ticket-id>` into `main`
   locally, push `main` to `origin`. `git mv in_testing/<file> done/<file>`,
   commit on `main`. Remove the integration worktree
   (`git worktree remove worktrees/<ticket-id>/integration`); leave the
   feature/subtask branches in place as audit trail.
-- **High priority:** push `feature/<ticket-id>` to `origin` and open a PR
-  against `main` (use the forge's CLI — `tea` for Gitea, `gh` for GitHub —
-  or its REST API with `$GIT_FORGE_TOKEN`; never print or log the token
-  itself). Append a Log entry with the PR link and **stop** — leave the
-  ticket in `in_testing/`. Report that it's waiting on human PR approval;
-  do not move it to `done/` yourself.
+- **Either trigger set:** push `feature/<ticket-id>` to `origin` and open a
+  PR against `main` (use the forge's CLI — `tea` for Gitea, `gh` for
+  GitHub — or its REST API with `$GIT_FORGE_TOKEN`; never print or log the
+  token itself). In the PR description, state *why* it's gated — priority,
+  and/or the exact `(manual)`-tagged criteria quoted verbatim, so the human
+  knows precisely what to go check (e.g. "confirm the main window opens and
+  the dashboard layout looks right"). Set `pr_url` in the ticket's
+  frontmatter to the PR's URL — this is what lets the planner's cross-ticket
+  conflict check (see `agents/planner.md`) find it later. Append a Log
+  entry with the PR link and **stop** — leave the ticket in `in_testing/`. Report that it's
+  waiting on human PR approval; do not move it to `done/` yourself.
   - When later told the PR was approved/merged, complete the job: pull the
     merge into local `main`, `git mv in_testing/<file> done/<file>`,
     commit, remove the integration worktree.

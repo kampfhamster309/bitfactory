@@ -26,9 +26,10 @@ where a decision is expected to be reopened.
 
 ## Definition of done / human gate
 
-- **Approval gate is priority-based: high-priority tickets require human
+- **Approval gate triggers on priority: high-priority tickets require human
   approval before `in_testing/ → done/`; low and medium go dark
-  automatically** once tests pass and acceptance criteria are judged met.
+  automatically** once tests pass and acceptance criteria are judged met —
+  unless the second trigger below also applies.
 - **Approval mechanism: PR/MR review on a git forge.** The ticket's feature
   branch is pushed and opened as a PR; approval = PR approved/merged.
   **Remote used for this: the local Gitea instance** (self-hosted on the
@@ -44,6 +45,24 @@ where a decision is expected to be reopened.
 - **No earlier gate for v1** — only the end gate above; the planner's
   subtask breakdown is not reviewed before workers start. *Revisit when:* bad
   subtask decompositions turn out to be a recurring problem.
+- **The gate has a second, independent trigger: manual verification.**
+  Priority and testability are orthogonal — a low-priority ticket can still
+  have an acceptance criterion no agent can check mechanically (e.g. "the
+  Tkinter main window opens and displays the dashboard layout correctly").
+  The gate fires if `priority == high` **or** the ticket has
+  `needs_manual_verification: true`, whichever applies; either reason routes
+  through the same PR-review mechanism, with the PR description telling the
+  human what to actually go check. This is deliberately *not* done by
+  forcing such tickets to `priority: high` — that would misrepresent a
+  routine UI tweak's urgency just to get it reviewed.
+  - Criteria expected to need manual verification are tagged inline with
+    `(manual)` by the planner while decomposing the ticket; the ticket-level
+    `needs_manual_verification` frontmatter field is set `true` if any
+    criterion is tagged.
+  - The tester can also set the flag `true` during validation if it
+    discovers an *untagged* criterion it genuinely can't verify itself —
+    the planner's tagging is a best-effort first pass, not the only chance
+    to catch this.
 
 ## Git and merging
 
@@ -53,6 +72,18 @@ where a decision is expected to be reopened.
   which also answers who owns conflict resolution: the **planner**, during
   integration — the tester never sees an unresolved conflict, only the
   already-integrated feature branch.
+- **That policy doesn't extend to tickets stuck waiting on a human PR
+  review.** A same-ticket subtask conflict resolves within one quick
+  planner pass; a ticket gated on `priority: high` or
+  `needs_manual_verification: true` (see above) can sit in `in_testing/`
+  for an unbounded, human-dependent amount of time, during which several
+  other tickets could land on `main` — raising real odds of a stale, hard
+  (or silently wrong) conflict once that PR finally merges. **The planner
+  holds a new ticket instead of claiming it** if its footprint looks likely
+  to overlap a currently-open PR — see
+  [architecture.md](architecture.md#cross-ticket-conflict-avoidance) for the
+  mechanism. Scoped only to PR-gated tickets, not ordinary `in_progress/`
+  ones, which merge quickly on their own and don't carry this risk.
 
 ## Failure handling
 

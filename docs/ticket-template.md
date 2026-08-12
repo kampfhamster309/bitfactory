@@ -13,6 +13,8 @@ bug_of: null
 retry_count: 0
 feature_branch: null
 subtasks: []
+needs_manual_verification: false   # set true if any criterion below is tagged (manual)
+pr_url: null              # set by tester when it opens a PR
 ---
 
 ## User story
@@ -21,6 +23,9 @@ As a ..., I want ..., so that ...
 ## Acceptance criteria
 - [ ] ...
 - [ ] ...
+<!-- Tag a criterion "(manual)" if no agent can verify it mechanically,
+     e.g. "- [ ] The main window opens and looks right (manual)" -->
+
 
 ## Log
 <!-- Agents append timestamped entries here as they hand off. -->

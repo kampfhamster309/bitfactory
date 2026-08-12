@@ -19,37 +19,56 @@ Given a ticket path in `backlog/`:
 1. Confirm you're on the trunk branch (`main`) with a clean working tree
    before starting. If not, stop and report the problem instead of
    proceeding.
-2. `git mv backlog/<file> in_progress/<file>` — the claim must happen via
+2. **Check for a conflict hold before claiming.** List tickets in
+   `in_testing/` with `pr_url` set (not `null`) — these are gated tickets
+   actually waiting on human PR review, an unbounded wait, unlike an
+   ordinary `in_testing/` ticket the tester is still actively validating.
+   For each one, run `git diff main...<its feature_branch> --name-only` to
+   get its exact touched files, and compare that against this new ticket's
+   user story for plausible overlap (mentioned file paths, module/feature
+   names — necessarily a heuristic, since this ticket isn't decomposed
+   yet). If overlap looks likely: **hold** — leave the ticket in
+   `backlog/` untouched (don't claim it), append a Log entry naming which
+   open PR it conflicts with, commit that note on `main`, and stop here;
+   report the hold instead of proceeding. Otherwise continue.
+3. `git mv backlog/<file> in_progress/<file>` — the claim must happen via
    `git mv` so history shows the move; this is this repo's equivalent of
    the atomic-rename lock.
-3. Read the ticket's user story and acceptance criteria.
-4. Decompose the work into subtasks. Scope each one to non-overlapping
+4. Read the ticket's user story and acceptance criteria.
+5. Decompose the work into subtasks. Scope each one to non-overlapping
    files/modules where you reasonably can, but don't over-engineer around
    unavoidable overlap — overlapping subtasks are allowed to run in
    parallel; conflicts get resolved during integration (Job B), not
    avoided at planning time.
-5. For each subtask, pick exactly one `assigned_role` from the roster in
+6. For each subtask, pick exactly one `assigned_role` from the roster in
    `agents/README.md`. If nothing in that roster genuinely fits, don't
    improvise from the full plugin catalog — say so explicitly in the
    ticket's Log and flag it for a human instead of guessing.
-6. Update the ticket's frontmatter:
+7. Review the acceptance criteria for anything no agent can verify
+   mechanically — typically something visual/interactive, like a GUI
+   actually rendering or a layout looking right. Tag each such criterion
+   inline with `(manual)`. This is a best-effort pass, not the only chance
+   to catch this — the tester can flag an untagged criterion later too.
+8. Update the ticket's frontmatter:
    - `status: in_progress`
    - `feature_branch: feature/<ticket-id>`
    - `subtasks:` — one entry per subtask: `id`, `description`,
      `assigned_role`, `branch: feature/<ticket-id>/subtask-<n>`,
      `status: pending`, `worktree: null`, `merged: false`
-7. Append a timestamped `## Log` entry summarizing the decomposition and
+   - `needs_manual_verification: true` if you tagged any criterion in step
+     7, otherwise leave it `false`
+9. Append a timestamped `## Log` entry summarizing the decomposition and
    assignments.
-8. Commit the claim + plan on `main`:
-   `git add -A && git commit -m "planner: claim and plan <ticket-id>"`.
-9. Create the feature branch, and an integration worktree for it that the
-   tester will later reuse:
-   - `git branch feature/<ticket-id> main`
-   - `git worktree add worktrees/<ticket-id>/integration feature/<ticket-id>`
-10. For each subtask:
+10. Commit the claim + plan on `main`:
+    `git add -A && git commit -m "planner: claim and plan <ticket-id>"`.
+11. Create the feature branch, and an integration worktree for it that the
+    tester will later reuse:
+    - `git branch feature/<ticket-id> main`
+    - `git worktree add worktrees/<ticket-id>/integration feature/<ticket-id>`
+12. For each subtask:
     - `git branch feature/<ticket-id>/subtask-<n> feature/<ticket-id>`
     - `git worktree add worktrees/<ticket-id>/subtask-<n> feature/<ticket-id>/subtask-<n>`
-11. Report back: the ticket id, the feature branch, and for each subtask
+13. Report back: the ticket id, the feature branch, and for each subtask
     its `assigned_role` and worktree path — this is what the orchestrator
     uses to dispatch each worker into its own worktree.
 
