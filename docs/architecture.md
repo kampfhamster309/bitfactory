@@ -86,16 +86,23 @@ subtasks:
   - id: 1
     description: "Add CSV export endpoint"
     assigned_role: voltagent-core-dev:backend-developer
-    branch: feature/01J8Z3K9F7-add-csv-export/subtask-1
+    branch: subtask/01J8Z3K9F7-add-csv-export/1
     status: pending          # pending | in_progress | done | failed
     worktree: null            # path, set when the worker starts
+    merged: false             # set true by the planner once integrated (Job B)
 ```
 
 ## Git branching model
 
 - One **feature branch** per ticket: `feature/<ticket-id>`.
 - One **subtask branch** per worker, off the feature branch:
-  `feature/<ticket-id>/subtask-<n>`.
+  `subtask/<ticket-id>/<n>` — a separate top-level namespace from
+  `feature/<ticket-id>`, not nested under it. Git branch refs are
+  hierarchical (like filesystem paths), so a ref can't be both a leaf and a
+  directory prefix for another ref: `feature/<ticket-id>/subtask-<n>` would
+  collide with `feature/<ticket-id>` itself and simply cannot be created
+  once the feature branch exists. Discovered the hard way during Phase 0's
+  first walkthrough, not anticipated at design time.
 - Each worker gets its own **git worktree** checked out to its subtask
   branch — never a shared checkout. This is what actually delivers the
   "isolated sub-branch" requirement from the original draft; a branch name

@@ -15,8 +15,11 @@ filed against) and `retry_count`.
 subtask branches, validated by the tester.
 
 **Subtask branch** — A git branch for one worker's piece of a ticket:
-`feature/<ticket-id>/subtask-<n>`, branched off the feature branch. Merged
-back into the feature branch by the planner once the worker reports done.
+`subtask/<ticket-id>/<n>`, branched off the feature branch. Deliberately a
+separate top-level namespace from `feature/<ticket-id>`, not nested under
+it — git ref hierarchy doesn't allow a branch to be both a leaf and a
+directory prefix for another branch. Merged back into the feature branch
+by the planner once the worker reports done.
 
 **Worktree** — A separate git working directory (`git worktree`) checked out
 to a subtask branch, giving one worker an isolated filesystem to edit in

@@ -75,6 +75,11 @@ those docs first:
   branch name alone isn't isolation — two agents editing the same working
   directory will clobber each other's uncommitted changes regardless of
   which branch they intend to commit to.
+- **Subtask branches are `subtask/<ticket-id>/<n>`, never nested under
+  `feature/<ticket-id>`.** Git refs are hierarchical, so a ref can't be
+  both a leaf and a directory prefix for another ref —
+  `feature/<ticket-id>/subtask-<n>` cannot coexist with `feature/<ticket-id>`
+  and will fail outright. Found the hard way during Phase 0.
 - **The planner merges subtask branches serially**, one at a time, and owns
   conflict resolution during that step. The tester never sees an unresolved
   conflict — only the already-integrated feature branch.

@@ -53,7 +53,7 @@ Given a ticket path in `backlog/`:
    - `status: in_progress`
    - `feature_branch: feature/<ticket-id>`
    - `subtasks:` — one entry per subtask: `id`, `description`,
-     `assigned_role`, `branch: feature/<ticket-id>/subtask-<n>`,
+     `assigned_role`, `branch: subtask/<ticket-id>/<n>`,
      `status: pending`, `worktree: null`, `merged: false`
    - `needs_manual_verification: true` if you tagged any criterion in step
      7, otherwise leave it `false`
@@ -65,9 +65,11 @@ Given a ticket path in `backlog/`:
     tester will later reuse:
     - `git branch feature/<ticket-id> main`
     - `git worktree add worktrees/<ticket-id>/integration feature/<ticket-id>`
-12. For each subtask:
-    - `git branch feature/<ticket-id>/subtask-<n> feature/<ticket-id>`
-    - `git worktree add worktrees/<ticket-id>/subtask-<n> feature/<ticket-id>/subtask-<n>`
+12. For each subtask (**not** nested under `feature/<ticket-id>` — git
+    refs can't be both a leaf and a directory prefix, so this must be a
+    separate top-level namespace):
+    - `git branch subtask/<ticket-id>/<n> feature/<ticket-id>`
+    - `git worktree add worktrees/<ticket-id>/subtask-<n> subtask/<ticket-id>/<n>`
 13. Report back: the ticket id, the feature branch, and for each subtask
     its `assigned_role` and worktree path — this is what the orchestrator
     uses to dispatch each worker into its own worktree.
@@ -83,7 +85,7 @@ Given a ticket id and a subtask id whose worker has reported done:
    (`git -C worktrees/<ticket-id>/subtask-<n> status` is clean, `git log`
    shows commits beyond the branch point).
 3. In `worktrees/<ticket-id>/integration`, run
-   `git merge feature/<ticket-id>/subtask-<n>`.
+   `git merge subtask/<ticket-id>/<n>`.
    - Clean merge: commit it.
    - Conflict: resolve it yourself, reading both sides and preserving both
      subtasks' intent — this is exactly the "conflicts resolved at merge
