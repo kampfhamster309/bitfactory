@@ -56,3 +56,8 @@ ticket file against the same rules. [docs/ticket-template.md](docs/ticket-templa
 documents the schema itself, per
 [docs/architecture.md](docs/architecture.md#ticket-id-and-file-format), for
 reference or for filing one by hand if you'd rather.
+
+## License
+
+[MIT](LICENSE) — use any of it, an acknowledgement is appreciated but not
+required.
