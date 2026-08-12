@@ -36,6 +36,22 @@ directory set to the target repo root — `planner`/`tester` are project-level
 agents and aren't discovered otherwise (see
 [decisions.md](decisions.md#orchestration)).
 
+**What one orchestrator cycle actually does, in order:**
+1. `scripts/ticket.py check-prs` — finish anything ready first. If it
+   reports a merged PR, invoke the tester for that ticket (tell it the PR
+   is merged) before doing anything else. Skipping this step is exactly
+   how a PR-gated ticket sits finished-but-never-finalized forever in a
+   headless run — see
+   [architecture.md](architecture.md#noticing-a-pr-has-been-approved).
+2. `scripts/ticket.py next` — pick the next ticket to claim, if capacity
+   allows and something's eligible.
+3. Run that ticket through planner (Job A) → workers → planner (Job B) →
+   tester, same as every phase so far.
+
+Step 1 comes first deliberately: finishing existing work takes priority
+over starting new work, so a ticket doesn't sit approved-but-unfinished
+while the orchestrator goes looking for something else to do.
+
 Before the first headless run: the target repo needs a `.claude/settings.json`
 (copied and adjusted from [settings.json.example](settings.json.example),
 see [architecture.md](architecture.md#permission-configuration)) and every

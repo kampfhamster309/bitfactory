@@ -26,15 +26,21 @@ Usage:
     scripts/ticket.py validate backlog/01J8Z3K9F7-add-csv-export.md
 
     scripts/ticket.py next   # which backlog/ ticket to claim next (priority, then FIFO)
+
+    scripts/ticket.py check-prs   # which in_testing/ tickets' PRs have been merged on Gitea
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import re
 import secrets
 import sys
 import time
+import urllib.error
+import urllib.request
 from datetime import date
 from pathlib import Path
 
@@ -267,6 +273,39 @@ def find_ticket_by_id(ticket_id: str) -> Path | None:
     return None
 
 
+# --- PR status checking (Gitea) --------------------------------------------
+
+GITEA_PR_URL_RE = re.compile(r"^(https?://[^/]+)/([^/]+)/([^/]+)/pulls/(\d+)$")
+
+
+def gitea_pr_api_url(pr_url: str) -> str:
+    """Convert a Gitea PR's html_url (e.g. http://host:port/owner/repo/pulls/3)
+    into its REST API url. Gitea-specific by construction -- see
+    decisions.md for the known limitation this leaves for a future
+    GitHub swap (a different URL shape and API would need their own
+    conversion, not handled here)."""
+    m = GITEA_PR_URL_RE.match(pr_url.strip())
+    if not m:
+        raise ValueError(f"doesn't look like a Gitea PR URL: {pr_url!r}")
+    base, owner, repo, number = m.groups()
+    return f"{base}/api/v1/repos/{owner}/{repo}/pulls/{number}"
+
+
+def check_pr_merged(pr_url: str) -> bool:
+    """True if the given Gitea PR is merged, False if it's still open.
+    Raises (ValueError, URLError, TimeoutError) if the check itself
+    couldn't be completed -- callers should treat that as "couldn't
+    determine," never assume unmerged just because the check failed."""
+    api_url = gitea_pr_api_url(pr_url)
+    req = urllib.request.Request(api_url)
+    token = os.environ.get("GIT_FORGE_TOKEN")
+    if token:
+        req.add_header("Authorization", f"token {token}")
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        data = json.load(resp)
+    return bool(data.get("merged"))
+
+
 # --- CLI -------------------------------------------------------------------
 
 def prompt_missing(args: argparse.Namespace) -> None:
@@ -449,6 +488,55 @@ def cmd_next(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check_prs(args: argparse.Namespace) -> int:
+    """Check every in_testing/ ticket with pr_url set against Gitea,
+    reporting which are merged and ready for the tester to complete
+    (see tester.md's "when later told the PR was approved/merged" step).
+
+    This is a detection-only command -- it never touches git or ticket
+    files itself. Nothing previously checked this automatically; every
+    prior PR-gated ticket only got finished because a human (or an
+    orchestrator standing in for one) happened to check by hand and say
+    so. An orchestrator loop should run this before `next`, every cycle,
+    so a merged PR gets finished before new work starts, rather than
+    depending on someone remembering to check.
+
+    Exit 0 if at least one ticket is confirmed merged (there's something
+    to finish); exit 1 otherwise (nothing gated, nothing merged yet, or
+    a check couldn't be completed) -- distinguishable from stdout, but a
+    single non-zero code is enough for a caller to branch on.
+    """
+    gated: list[tuple[Path, str]] = []
+    for path in (REPO_ROOT / "in_testing").glob("*.md"):
+        try:
+            fields, _ = parse_ticket(path.read_text())
+        except ValueError as e:
+            print(f"warning: skipping unparseable ticket {path.name}: {e}", file=sys.stderr)
+            continue
+        pr_url = fields.get("pr_url")
+        if pr_url and pr_url != "null":
+            gated.append((path, pr_url))
+
+    if not gated:
+        print("no in_testing/ tickets have an open PR to check")
+        return 1
+
+    any_merged = False
+    for path, pr_url in gated:
+        try:
+            merged = check_pr_merged(pr_url)
+        except (ValueError, urllib.error.URLError, TimeoutError) as e:
+            print(f"COULD NOT CHECK  {path.relative_to(REPO_ROOT)}  {pr_url}  ({e})")
+            continue
+        if merged:
+            print(f"MERGED  {path.relative_to(REPO_ROOT)}  {pr_url}")
+            any_merged = True
+        else:
+            print(f"open    {path.relative_to(REPO_ROOT)}  {pr_url}")
+
+    return 0 if any_merged else 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -477,6 +565,11 @@ def main() -> int:
         help=f"max tickets allowed in in_progress/ at once (default: {DEFAULT_TICKET_CAP})",
     )
     p_next.set_defaults(func=cmd_next)
+
+    p_check_prs = sub.add_parser(
+        "check-prs", help="check in_testing/ tickets' open PRs against Gitea for merges"
+    )
+    p_check_prs.set_defaults(func=cmd_check_prs)
 
     args = parser.parse_args()
     return args.func(args)

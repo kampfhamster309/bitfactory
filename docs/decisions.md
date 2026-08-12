@@ -190,6 +190,21 @@ where a decision is expected to be reopened.
     discovers an *untagged* criterion it genuinely can't verify itself —
     the planner's tagging is a best-effort first pass, not the only chance
     to catch this.
+- **`scripts/ticket.py check-prs` detects merged PRs; every orchestrator
+  cycle runs it before `next`.** Real gap: tester.md always said what to
+  do "when later told the PR was approved/merged," but nothing ever
+  actually noticed on its own — every PR-gated ticket to date only got
+  finished because a human (or me, standing in for one) checked the
+  forge by hand. That's a real problem for genuinely headless operation.
+  `check-prs` reads every `in_testing/` ticket's `pr_url`, checks it
+  against Gitea, and reports which are merged — detection only, same
+  separation of concerns as `next` (picks a ticket, doesn't claim it).
+  The orchestrator cycle now runs it first, so finishing existing
+  approved work always takes priority over starting something new. See
+  [architecture.md](architecture.md#noticing-a-pr-has-been-approved) and
+  [roadmap.md](roadmap.md#phase-1--headless-still-single-threaded).
+  Gitea-specific (parses the PR's `html_url` shape); needs its own logic
+  for GitHub, not just a host swap, once that migration happens.
 
 ## Git and merging
 

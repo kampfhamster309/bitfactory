@@ -65,8 +65,16 @@ documents the schema itself, per
 reference or for filing one by hand if you'd rather.
 
 `scripts/ticket.py next` (Phase 3) picks which `backlog/` ticket to claim
-next — highest priority first, FIFO within the same priority — respecting
-the `in_progress/` concurrency cap via `--cap` (default 3).
+next — highest priority first, FIFO within the same priority, among
+tickets whose `depends_on` are satisfied — respecting the `in_progress/`
+concurrency cap via `--cap` (default 3).
+
+`scripts/ticket.py check-prs` checks every `in_testing/` ticket's open PR
+against Gitea and reports which are merged — the detection an
+orchestrator needs to actually notice a PR-gated ticket is ready to
+finish, rather than depending on a human happening to check by hand. Run
+this before `next` every orchestrator cycle — see
+[docs/roadmap.md](docs/roadmap.md#phase-1--headless-still-single-threaded).
 
 ## Permission configuration
 

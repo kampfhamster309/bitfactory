@@ -528,6 +528,34 @@ from using a forge for this approval step).
 There is no earlier gate in v1 — the planner's subtask breakdown is not
 reviewed before workers start; only this end gate exists.
 
+### Noticing a PR has been approved
+
+The tester's own procedure says what to do "when later told the PR was
+approved/merged" — but nothing previously said *how* that news was
+supposed to arrive. Every PR-gated ticket so far only got finished
+because a human (or an orchestrator standing in for one) happened to
+check the forge by hand and say so — there was no mechanism that
+actually noticed on its own, which defeats the point for a genuinely
+headless run.
+
+`scripts/ticket.py check-prs` closes this: it checks every `in_testing/`
+ticket with `pr_url` set against Gitea's API and reports which are now
+merged. It's detection-only — it never touches git or ticket files
+itself, the same separation of concerns as `next` (which picks a ticket
+but doesn't claim it). **Every orchestrator cycle should run `check-prs`
+before `next`** — finish whatever's ready before starting something new,
+rather than leaving a merged PR sitting unfinished while the orchestrator
+goes looking for new work instead (see
+[roadmap.md](roadmap.md#phase-1--headless-still-single-threaded) for
+where this fits into the actual cycle). If it reports a merged PR, the
+orchestrator invokes the tester with that ticket id, telling it the PR is
+merged — same shape as it's always been told, just triggered by a real
+check instead of a human remembering to look.
+
+Gitea-specific by construction (parses the PR's `html_url` shape to build
+its API URL) — will need its own logic for GitHub once the pipeline
+earns that swap, not just a host substitution.
+
 ## Logging / audit trail
 
 Log lines in the ticket file are the only persisted audit trail for v1 — no

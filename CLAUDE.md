@@ -61,6 +61,13 @@ sources); don't assume tooling exists beyond what's referenced below.
   `in_progress/` cap (default 3). Non-zero exit if nothing's claimable
   (backlog empty, all blocked, or at capacity) — check the exit code
   before assuming stdout has a path.
+- `scripts/ticket.py check-prs` — check every `in_testing/` ticket's
+  `pr_url` against Gitea, report which are merged. Detection only, never
+  touches git/ticket files. **Every orchestrator cycle runs this before
+  `next`** — finish approved work before starting new work; this is the
+  actual mechanism for a headless run to notice a PR was merged, since
+  nothing else does. Exit 0 if something's merged and ready, non-zero
+  otherwise.
 
 ## Invariants that must not be violated when implementing this
 

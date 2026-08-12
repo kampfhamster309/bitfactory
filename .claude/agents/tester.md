@@ -64,7 +64,9 @@ planner, or by you in step 4 above). Either one routes through PR review.
   conflict check (see `agents/planner.md`) find it later. Append a Log
   entry with the PR link and **stop** — leave the ticket in `in_testing/`. Report that it's
   waiting on human PR approval; do not move it to `done/` yourself.
-  - When later told the PR was approved/merged, complete the job:
+  - When later told the PR was approved/merged (the orchestrator finds
+    this out by running `scripts/ticket.py check-prs`, which you don't
+    need to run yourself — you'll be invoked with the news), complete the job:
     `git pull origin main` (brings the forge-side merge into local `main`),
     `git mv in_testing/<file> done/<file>`, commit, remove the integration
     worktree, **then push `main` to `origin` last** — same reasoning as
