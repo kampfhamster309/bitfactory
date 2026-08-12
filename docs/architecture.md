@@ -125,6 +125,24 @@ subtasks:
 - The tester agent works directly on the feature branch (no further
   worktree needed — it's validating the integrated result).
 
+## Dispatching workers
+
+The orchestrator dispatches a worker by invoking it as an agent pointed at
+the worktree path the planner already created and reported
+(`worktrees/<ticket-id>/subtask-<n>`) — **without** requesting the
+harness's own worktree isolation for that invocation (e.g. Claude Code's
+`Agent` tool has an `isolation: "worktree"` option; leave it unset here).
+Passing it anyway makes the harness spin up a *second*, separate worktree
+of its own for the subagent, distinct from the one bitfactory's planner
+already created — the two isolation mechanisms collide: the worker's
+git/write operations get scoped to the harness's worktree, not
+bitfactory's, so it can't commit onto the actual `subtask/<ticket-id>/<n>`
+branch directly. bitfactory's own per-subtask worktree already *is* the
+isolation; the harness doesn't need to add another layer on top. Found
+during Phase 0 — the worker still produced correct work, just on a stray
+branch that had to be cherry-picked onto the right one by hand instead of
+landing there directly.
+
 ## Concurrency and locking
 
 - **Claiming a ticket:** the planner claims a ticket by moving its file out

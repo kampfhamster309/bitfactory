@@ -41,11 +41,13 @@ The gate has two independent triggers — check both, not just priority:
 `priority == high`, or `needs_manual_verification == true` (set by the
 planner, or by you in step 4 above). Either one routes through PR review.
 
-- **Neither trigger set:** merge `feature/<ticket-id>` into `main`
-  locally, push `main` to `origin`. `git mv in_testing/<file> done/<file>`,
-  commit on `main`. Remove the integration worktree
-  (`git worktree remove worktrees/<ticket-id>/integration`); leave the
-  feature/subtask branches in place as audit trail.
+- **Neither trigger set:** merge `feature/<ticket-id>` into `main` locally.
+  `git mv in_testing/<file> done/<file>`, commit on `main`. Remove the
+  integration worktree (`git worktree remove worktrees/<ticket-id>/integration`);
+  leave the feature/subtask branches in place as audit trail. **Push `main`
+  to `origin` last**, after all of the above — pushing before the final
+  `done/` commit leaves that commit stranded locally, which is exactly the
+  kind of desync this step exists to avoid.
 - **Either trigger set:** push `feature/<ticket-id>` to `origin` and open a
   PR against `main` (use the forge's CLI — `tea` for Gitea, `gh` for
   GitHub — or its REST API with `$GIT_FORGE_TOKEN`; never print or log the
@@ -57,9 +59,15 @@ planner, or by you in step 4 above). Either one routes through PR review.
   conflict check (see `agents/planner.md`) find it later. Append a Log
   entry with the PR link and **stop** — leave the ticket in `in_testing/`. Report that it's
   waiting on human PR approval; do not move it to `done/` yourself.
-  - When later told the PR was approved/merged, complete the job: pull the
-    merge into local `main`, `git mv in_testing/<file> done/<file>`,
-    commit, remove the integration worktree.
+  - When later told the PR was approved/merged, complete the job:
+    `git pull origin main` (brings the forge-side merge into local `main`),
+    `git mv in_testing/<file> done/<file>`, commit, remove the integration
+    worktree, **then push `main` to `origin` last** — same reasoning as
+    above: the ticket-store bookkeeping commit is worthless sitting only
+    on the local clone. (Found this exact bug during Phase 0: the tester
+    pulled the PR merge and did the local bookkeeping correctly, but
+    nothing pushed it back, leaving `main` several commits ahead of
+    `origin/main` with no one noticing until asked.)
 
 ## On fail
 
