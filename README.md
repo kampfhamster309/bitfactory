@@ -5,13 +5,14 @@ stories go into a backlog, and a pipeline of Claude Code agents (planner →
 workers → tester) plans, implements, tests, and merges them with as little
 human involvement as possible.
 
-Status: **Phase 0 validated** — the planner/tester agents
-([agents/README.md](agents/README.md)) and `scripts/ticket.py` exist and
-have driven two tickets end to end against a sandbox target repo, one
-through the plain path and one through the PR-gated
-(`needs_manual_verification`) path. Still fully interactive/manual — no
-orchestrator loop yet. See [docs/roadmap.md](docs/roadmap.md) for what's
-next (Phase 1: headless invocation).
+Status: **Phase 1 validated** — the planner/tester agents
+([agents/README.md](agents/README.md)) and `scripts/ticket.py` have driven
+four tickets end to end against a sandbox target repo: the plain path, the
+PR-gated (`needs_manual_verification`) path, and — as of the most recent
+ticket — a fully unattended headless (`claude -p`) run that completed with
+zero human intervention, including the push. See
+[docs/roadmap.md](docs/roadmap.md) for what's next (Phase 2: worker
+parallelism).
 
 ## Start here
 

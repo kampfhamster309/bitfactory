@@ -16,7 +16,8 @@ approval gate, push to the local Gitea instance for that, not `origin`.
 
 **Exit criteria:** one ticket goes end to end to `done/` with a clean,
 inspectable git history and a ticket file that accurately reflects what
-happened.
+happened. **Met** — twice over, in fact (once with a human standing in
+for the subagents, once for real).
 
 ## Phase 1 — Headless, still single-threaded
 
@@ -63,7 +64,11 @@ real repo while the pipeline is still unproven, ahead of the GitHub
 
 **Exit criteria:** a ticket dropped into `backlog/` reaches `done/` (or
 `needs_human/`) via a headless Claude Code invocation, without a human
-driving each step interactively.
+driving each step interactively. **Met** — the first attempt found and
+needed fixes for three real bugs (workspace trust, git push
+authentication, dead `Write(...)` permission rules) along the way; the
+next headless run afterward completed fully unattended, including the
+push.
 
 ## Phase 2 — Isolation and true worker parallelism
 
