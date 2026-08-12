@@ -87,7 +87,7 @@ subtasks:
     description: "Add CSV export endpoint"
     assigned_role: voltagent-core-dev:backend-developer
     branch: subtask/01J8Z3K9F7-add-csv-export/1
-    status: pending          # pending | in_progress | done | failed
+    status: pending          # pending | in_progress | done | failed -- planner sets this from the worker's report, not the worker itself
     worktree: null            # path, set when the worker starts
     merged: false             # set true by the planner once integrated (Job B)
 ```
@@ -182,19 +182,33 @@ If the orchestrator is interrupted with a ticket mid-flight in
 `in_progress/` (some subtasks merged, maybe an open worktree), the planner
 resumes automatically on restart by re-deriving what's left to do from the
 ticket's `subtasks[]` state and the feature branch's git history — no human
-triage required by default. This relies on the report-back protocol below
-always being reflected in the ticket file *before* a worktree is torn down,
-so `subtasks[]` is a reliable source of truth to resume from.
+triage required by default. This relies on the ticket file always being
+updated *before* a worktree is torn down (the planner's job, per the
+report-back protocol below), so `subtasks[]` is a reliable source of truth
+to resume from.
 
 ## Agent report-back protocol
 
 A worker reports completion by:
-1. Committing its work on its subtask branch (including tests).
-2. Updating its `subtasks[]` entry in the ticket file to `status: done` (or
-   `failed`, with a note on why) — this is the hand-off signal the planner
-   watches for.
+1. Committing its work on its subtask branch (including tests) — entirely
+   within its own worktree.
+2. Reporting completion (or failure, with why) back to whoever invoked it.
+   **The worker never edits the ticket file itself** — that file is shared
+   state across all of a ticket's subtasks, and writing to it isn't scoped
+   to the worker's own worktree. (An earlier version of this protocol had
+   the worker do this directly; found during Phase 0 that it both violates
+   the worker-guardrails write-scope below and risks a race if two
+   subtasks on the same ticket finish around the same time and both try to
+   edit the same file.)
 3. Leaving the worktree in place until the planner has merged it (the
    planner cleans up worktrees after a successful merge).
+
+**The planner records `status: done`** (or `failed`) on the relevant
+`subtasks[]` entry, as the first step of Job B ([planner.md](../.claude/agents/planner.md))
+— based on the worker's report plus its own verification that the
+worktree actually has committed work. This keeps the ticket file's only
+writer, for subtask bookkeeping, as the planner: one writer, no race,
+and workers stay fully inside their own worktree with no carve-out needed.
 
 ## Worker guardrails
 
@@ -203,8 +217,9 @@ Workers run unattended (no human watching each tool call), so v1 defaults to
 ([decisions.md](decisions.md#isolation-and-safety)):
 - Bash access is allowlisted, not open-ended.
 - No unrestricted network access.
-- Writes are scoped to the worker's own worktree — a worker has no reason to
-  touch files outside it.
+- Writes are scoped to the worker's own worktree, full stop — including the
+  ticket file itself (see report-back protocol above); a worker never has
+  a reason to touch anything outside its worktree.
 
 Loosen these deliberately per-role only when a specific worker genuinely
 needs more (e.g. a role that must run a package manager against a real

@@ -76,14 +76,20 @@ Given a ticket path in `backlog/`:
 
 ## Job B: Integrate a finished subtask
 
-Given a ticket id and a subtask id whose worker has reported done:
+Given a ticket id and a subtask id whose worker has reported done (via its
+response to whoever invoked it — **workers never edit the ticket file
+themselves**, that's your job specifically, to keep the ticket file's only
+writer as the planner and avoid a race if two subtasks finish close
+together):
 
-1. Re-read the ticket's `subtasks[]` entry for that subtask. If its
-   `status` isn't `done`, stop and report the inconsistency rather than
-   merging — don't trust the invocation alone.
-2. Confirm the subtask's worktree has committed work
+1. Verify the report yourself before trusting it: confirm the subtask's
+   worktree actually has committed work
    (`git -C worktrees/<ticket-id>/subtask-<n> status` is clean, `git log`
-   shows commits beyond the branch point).
+   shows commits beyond the branch point). If it doesn't, don't proceed —
+   investigate instead of merging on faith.
+2. Set that subtask's `subtasks[]` entry to `status: done` in the ticket
+   file (or `status: failed` with a note, if verification shows the worker
+   didn't actually finish).
 3. In `worktrees/<ticket-id>/integration`, run
    `git merge subtask/<ticket-id>/<n>`.
    - Clean merge: commit it.
