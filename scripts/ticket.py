@@ -146,6 +146,19 @@ def parse_ticket(text: str, *, require_unplanned: bool = False) -> tuple[dict[st
     for line in fm_text.splitlines():
         if not line.strip() or line.strip().startswith("#"):
             continue
+        if line[0].isspace():
+            # Nested/continuation content under a top-level key -- e.g. a
+            # subtask's own fields, or a multi-line `description: >` block
+            # scalar the planner wrote. This schema's real top-level keys
+            # are always unindented (single-line scalars, or depends_on's
+            # flow-style list); anything indented belongs to a parent key
+            # like `subtasks:`, not a new top-level field, so skip it
+            # rather than trying to parse it as one. Found this the hard
+            # way: a real planner-written subtask description used YAML's
+            # `>` block-scalar syntax, which has no colon on its
+            # continuation lines and was misidentified as a malformed
+            # top-level line before this check existed.
+            continue
         if ":" not in line:
             raise ValueError(f"unparseable frontmatter line: {line!r}")
         key, _, rest = line.partition(":")

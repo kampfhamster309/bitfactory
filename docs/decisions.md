@@ -127,6 +127,25 @@ where a decision is expected to be reopened.
   both the fix and the original `--bug-of` path against a real
   populated-subtasks `done` ticket in a sandbox before touching the real
   target repo.
+- **A second, more consequential `parse_ticket()` bug surfaced the moment
+  `depends_on` was tried against a real planner-written `done` ticket**:
+  the real planner (not my own hand-written test fixtures) wrote its
+  subtask `description` using YAML's multi-line block-scalar syntax
+  (`description: >` with indented continuation lines) rather than a
+  single-line quoted string — perfectly valid YAML, but `parse_ticket()`'s
+  line-by-line loop tried to parse every continuation line as its own
+  `key: value` pair and raised on the first one without a colon. This
+  isn't an edge case — it's what real planner output looks like once a
+  description is long enough to want wrapping, so it would have kept
+  silently breaking `depends_on` (and anything else reading `done/`
+  tickets) going forward, not just this once. Fixed by skipping any
+  frontmatter line with leading whitespace — this schema's real top-level
+  keys are always unindented, so an indented line is by construction
+  nested content under a parent key (`subtasks:`'s own fields, or a block
+  scalar's continuation), never a new top-level field to parse. Re-ran
+  the full sandbox regression suite after the fix to confirm nothing else
+  broke.
+
 - **No separate token/cost budget per ticket for v1** — the retry cap (below)
   is the only cost bound for now. *Revisit when:* Phase 0 shows what a real
   ticket actually costs, or a ticket burns unexpectedly high cost without
