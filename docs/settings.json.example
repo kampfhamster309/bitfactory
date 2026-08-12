@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+
+      "Bash(git mv *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git branch *)",
+      "Bash(git worktree add *)",
+      "Bash(git worktree remove *)",
+      "Bash(git merge *)",
+      "Bash(git push origin *)",
+      "Bash(git pull origin *)",
+      "Bash(git diff *)",
+
+      "Bash(python3 scripts/ticket.py *)",
+      "Bash(python3 *)",
+      "Bash(python -m *)",
+
+      "Bash(tea *)",
+      "Bash(curl https://YOUR-GIT-FORGE-HOST/*)",
+
+      "Edit(backlog/**)",
+      "Write(backlog/**)",
+      "Edit(in_progress/**)",
+      "Write(in_progress/**)",
+      "Edit(in_testing/**)",
+      "Write(in_testing/**)",
+      "Edit(done/**)",
+      "Write(done/**)",
+      "Edit(needs_human/**)",
+      "Write(needs_human/**)",
+      "Edit(worktrees/**)",
+      "Write(worktrees/**)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(git push * --force*)",
+      "Bash(git branch -D *)",
+      "Bash(git branch -d *)",
+      "Bash(git reset --hard*)",
+      "WebFetch"
+    ]
+  }
+}

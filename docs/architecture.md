@@ -269,6 +269,48 @@ never persisted) means switching from the Gitea token to a real GitHub PAT
 later is a value swap in the same slot, not a rethink of how secrets flow
 through the pipeline.
 
+## Permission configuration
+
+The guardrails and secrets scoping above are *decisions*; this is what
+turns them into something Claude Code actually enforces. [`settings.json.example`](settings.json.example)
+is the template — copy it to `.claude/settings.json` in the target repo
+and adjust before Phase 1 headless invocation (a working copy already
+exists in the sandbox target used for Phase 0).
+
+- **What it allows:** the concrete git/worktree operations planner and
+  tester actually use (`mv`, `add`, `commit`, `branch`, `worktree add/remove`,
+  `merge`, scoped `push`/`pull` to `origin` only), `scripts/ticket.py`,
+  running the target repo's own code/tests, and network access narrowed to
+  one specific git-forge host (`curl https://YOUR-GIT-FORGE-HOST/*` —
+  **edit this placeholder per target repo**, it's the one line that can't
+  be copied verbatim). Writes are scoped to the ticket-store directories
+  and `worktrees/**` — nowhere else.
+- **What it denies, explicitly (defense in depth):** force-push, hard
+  reset, force branch deletion, `rm -rf`, `sudo`, and `WebFetch`. Deny
+  rules always win over allow rules, so these stay blocked even if a
+  future allow rule accidentally overlaps.
+- **The `python3 *` / `python -m *` allow entries are stack-specific to
+  this template's sandbox target.** They exist so the tester can actually
+  run the target repo's test suite and workers can run the app — swap them
+  for whatever the target repo's real stack needs (`npm test`, `go test`,
+  etc.) rather than assuming Python.
+- **No `defaultMode` is set.** Deliberately — setting `"defaultMode": "dontAsk"`
+  in the committed file would apply to *interactive* sessions too, silently
+  auto-denying anything outside the allowlist instead of prompting a human
+  who's right there watching (exactly the situation Phase 0 has mostly been
+  run in so far). Headless invocations (Phase 1) should pass
+  `--permission-mode dontAsk` explicitly on the command line instead, so
+  interactive use keeps its normal safety net and only headless runs get
+  the strict auto-deny behavior.
+- **This isn't adversarial-proof, and isn't meant to be.** It stops the
+  clearly dangerous stuff (destructive git ops, arbitrary network egress)
+  and reduces prompt friction for the well-worn path; it doesn't stop a
+  worker from running an allowed git command it wasn't supposed to use.
+  That boundary is enforced by each agent's own instructions (`.claude/agents/*.md`)
+  plus the human review at the PR gate, not by this file — consistent with
+  treating these as cooperative agents following documented procedure, not
+  something being defended against active misuse.
+
 ## Validation protocol (tester agent)
 
 Two distinct checks, reported separately rather than collapsed into one

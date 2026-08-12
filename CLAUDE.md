@@ -109,3 +109,9 @@ those docs first:
   unrestricted network, writes scoped to their own worktree. Only the
   planner and tester ever need the git-forge token, and it must never be
   committed, logged, or written into a ticket's `## Log` section.
+- **The guardrails above are enforced via `.claude/settings.json`**
+  (`docs/settings.json.example` is the template) **— not set to
+  `defaultMode: "dontAsk"`.** That's deliberate: it'd make interactive
+  sessions silently auto-deny instead of prompting. Headless invocations
+  (Phase 1) pass `--permission-mode dontAsk` explicitly on the command
+  line instead, layered on top of the same allow/deny rules.

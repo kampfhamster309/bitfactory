@@ -59,6 +59,15 @@ documents the schema itself, per
 [docs/architecture.md](docs/architecture.md#ticket-id-and-file-format), for
 reference or for filing one by hand if you'd rather.
 
+## Permission configuration
+
+[docs/settings.json.example](docs/settings.json.example) is the template
+for `.claude/settings.json` in a target repo — required before Phase 1
+headless invocation (`claude -p`) so it doesn't stall on permission
+prompts nobody's there to answer. See
+[docs/architecture.md](docs/architecture.md#permission-configuration) for
+what it does and doesn't cover.
+
 ## License
 
 [MIT](LICENSE) — use any of it, an acknowledgement is appreciated but not

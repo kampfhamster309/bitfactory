@@ -35,6 +35,13 @@ directory set to the target repo root — `planner`/`tester` are project-level
 agents and aren't discovered otherwise (see
 [decisions.md](decisions.md#orchestration)).
 
+Before the first headless run: the target repo needs a `.claude/settings.json`
+(copied and adjusted from [settings.json.example](settings.json.example),
+see [architecture.md](architecture.md#permission-configuration)) and every
+headless invocation needs `--permission-mode dontAsk` passed explicitly —
+otherwise it'll stall or silently deny on the first action outside the
+default permission set, with nobody watching to approve it.
+
 Note: if a high-priority ticket goes through this phase, its approval gate
 requires a PR review ([decisions.md](decisions.md#definition-of-done--human-gate)).
 Test runs in this phase target the local Gitea instance, not the `origin`
