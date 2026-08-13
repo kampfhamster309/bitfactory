@@ -55,7 +55,11 @@ Given a ticket path in `backlog/`:
    explicitly where the code and its tests belong (`src/` + `src/tests/`
    for a Python target repo, that stack's own idiomatic equivalent
    otherwise) — don't leave the worker to default to the repo root out of
-   habit.
+   habit. If a subtask needs grounding in real reference material and
+   `$KNOWLEDGE_VAULT_PATH` is set, resolve it yourself and write the
+   **literal absolute path** into that subtask's description — a
+   dispatched worker can't be assumed to inherit the env var itself (see
+   `docs/architecture.md#knowledge-sources`).
 7. For each subtask, pick exactly one `assigned_role` from the roster in
    `agents/README.md`. If nothing in that roster genuinely fits, don't
    improvise from the full plugin catalog — say so explicitly in the

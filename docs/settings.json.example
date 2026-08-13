@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Read",
+      "Read(//YOUR-ABSOLUTE-KNOWLEDGE-VAULT-PATH/**)",
 
       "Bash(git mv *)",
       "Bash(git -C * mv *)",

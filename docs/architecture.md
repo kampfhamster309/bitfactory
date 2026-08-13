@@ -242,6 +242,56 @@ relative path (`.venv/bin/python`, etc.) that already works at the repo
 root — no absolute paths or special-cased commands needed downstream, and
 no new permission rules beyond the existing relative-path ones.
 
+## Knowledge sources
+
+Some tickets need grounding in real reference material — e.g. a portfolio
+site built from an actual career history, not invented content. Bitfactory
+supports pointing a ticket at an external knowledge source, but doesn't
+create, populate, sync, or otherwise manage it — that's explicitly out of
+scope. It's read-only reference material the pipeline consumes, the same
+category of "environment provisioning, not ticket-driven work" as the git
+credential helper and workspace trust ([decisions.md](decisions.md#orchestration)).
+
+**Format: an [Obsidian](https://obsidian.md) vault** — in practice just a
+directory of Markdown files with YAML frontmatter and `[[wikilinks]]`.
+Nothing about reading it requires the Obsidian application itself; a
+worker's Read/Grep tools read the files directly, the same way it would
+explore an unfamiliar codebase. Wikilinks and frontmatter read as plain,
+comprehensible text to an LLM without any special parsing — no bitfactory
+tooling exists to resolve links or parse frontmatter, and none is planned
+unless raw exploration genuinely proves insufficient for some future,
+much larger vault. (One real gap if you use Obsidian's Dataview plugin:
+its query blocks are computed *inside* the app — a raw file read sees the
+query source, not the rendered result.) Wikilinks specifically are a
+better fit here than a hand-maintained index file: they're written
+inline, incrementally, as part of normal note-taking, rather than in a
+separate artifact that has to be kept in sync with content as it
+changes — exactly the kind of drift that caused the ticket `status:`
+staleness bug (see [decisions.md](decisions.md#definition-of-done--human-gate)).
+
+**Locating it — two separate mechanisms, not one, because of how they were verified:**
+- **`$KNOWLEDGE_VAULT_PATH`** — an env var holding the vault's absolute
+  path, set once in the shell profile, same pattern as `$GIT_FORGE_TOKEN`.
+  Only reliably resolvable by the **top-level orchestrating flow**
+  (planner/tester, or an interactive/headless session acting as one) —
+  confirmed a dispatched worker subagent can't be assumed to inherit it
+  (not explicitly documented, but the isolation signals — subagents get a
+  reduced system prompt, `cd` doesn't persist across their own tool
+  calls — point that way, and the safe default is to not rely on it).
+  **The planner resolves it itself and writes the literal absolute path
+  into any subtask description that needs vault content** — the same
+  pattern already used for the `.venv` path and `src/`-layout convention,
+  not a new mechanism.
+- **A `Read(//<absolute-vault-path>/**)` permission rule in
+  `.claude/settings.json`.** Confirmed by testing, not assumed: a bare
+  `"Read"` allow entry does **not** grant access to a path outside the
+  working directory — an unscoped `Read` only covers the project itself.
+  This rule is necessarily a static, machine-specific literal path (like
+  the Gitea host baked into the `curl` rule) since permission rules can't
+  reference an env var at rule-definition time; set it once per machine
+  when `$KNOWLEDGE_VAULT_PATH` is set, and keep the two in sync by hand if
+  the vault ever moves.
+
 ## Concurrency and locking
 
 - **Claiming a ticket:** the planner claims a ticket by moving its file out
@@ -414,7 +464,12 @@ exists in the sandbox target used for Phase 0).
   running the target repo's own code/tests, and network access narrowed to
   one specific git-forge host (`curl https://YOUR-GIT-FORGE-HOST/*` —
   **edit this placeholder per target repo**, it's the one line that can't
-  be copied verbatim). Writes are scoped to the ticket-store directories
+  be copied verbatim). `Read(//YOUR-ABSOLUTE-KNOWLEDGE-VAULT-PATH/**)` is
+  the equivalent placeholder for an external knowledge source (see
+  [Knowledge sources](#knowledge-sources)) — remove it if the target repo
+  doesn't use one; a bare `"Read"` entry does *not* cover paths outside
+  the working directory, confirmed by testing, not assumed. Writes are
+  scoped to the ticket-store directories
   and `worktrees/**` — nowhere else, via `Edit(path/**)` rules only.
   (There's no separate `Write(path/**)` permission — Claude Code's own
   file-permission checks only look at `Edit` rules, which cover every

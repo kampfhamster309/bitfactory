@@ -325,3 +325,45 @@ where a decision is expected to be reopened.
   concrete Python default and why it's `unittest discover -t src`, not a
   `PYTHONPATH=` env-var prefix (same permission-pattern-matching pitfall
   as the git-push fix above).
+
+## Knowledge sources
+
+- **An Obsidian vault (plain Markdown + YAML frontmatter + `[[wikilinks]]`)
+  is the supported format for grounding a ticket in real reference
+  material, not a bespoke bitfactory format and not real RAG
+  (embeddings/vector search).** Considered and rejected building an
+  actual retrieval pipeline: the corpus this needs to support isn't
+  reliably small (could be a personal CV or a company wiki), so "just
+  read all the files" doesn't generalize — but the fix for that isn't
+  embeddings, it's giving a worker Read/Grep tools and letting it explore
+  the vault the way it already explores an unfamiliar codebase. Wikilinks
+  beat a hand-maintained index file specifically because they're written
+  *inline*, incrementally, as part of normal note-taking — a separate
+  index would drift out of sync exactly like the ticket `status:` field
+  did (see above). No bitfactory tooling to resolve links/frontmatter for
+  v1; add it only if raw exploration proves insufficient for some future,
+  much larger vault. **Vault existence and management (creation, syncing,
+  content) is explicitly out of scope for bitfactory** — it's read-only
+  external reference material, not something the pipeline provisions.
+- **Two separate, confirmed-by-testing facts shaped how the vault is
+  located, not assumption:**
+  1. A dispatched worker subagent can't be assumed to inherit an env var
+     set in the orchestrating session's shell (not explicitly documented,
+     but the isolation signals point that way — a subagent gets a
+     reduced system prompt and `cd` doesn't persist across its own tool
+     calls). So `$KNOWLEDGE_VAULT_PATH` is resolved by the **planner**
+     (part of the top-level flow, not a dispatched subagent) and passed
+     to workers as a literal path in the subtask description — the same
+     pattern already used for the `.venv` path and `src/` layout, not a
+     new mechanism.
+  2. A bare `"Read"` allow entry does **not** grant access outside the
+     working directory — confirmed by actually testing it under
+     `--permission-mode dontAsk`, not assumed from the settings.json
+     syntax alone. Reading an external vault needs its own explicit
+     `Read(//<absolute-vault-path>/**)` rule, a static, machine-specific
+     literal path in `.claude/settings.json` (permission rules can't
+     reference an env var at rule-definition time) — same category as
+     the Gitea host already baked into the `curl` rule there. Set once
+     per machine alongside `$KNOWLEDGE_VAULT_PATH`; keep both in sync by
+     hand if the vault ever moves. See
+     [architecture.md](architecture.md#knowledge-sources).
