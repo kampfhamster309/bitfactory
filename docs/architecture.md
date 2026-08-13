@@ -162,6 +162,14 @@ during Phase 0 — the worker still produced correct work, just on a stray
 branch that had to be cherry-picked onto the right one by hand instead of
 landing there directly.
 
+**Tell the worker not to chain Bash commands with `&&`/`;`/`|`** — issue
+one command per tool call instead. `.claude/agents/planner.md` and
+`tester.md` already follow this by construction, but a generic worker
+role from the installed roster doesn't know it going in, and a chained
+command can get denied outright under `dontAsk` (see
+[Worker guardrails](#worker-guardrails) below). Worth including in every
+worker's dispatch prompt, not just discovered after a denial.
+
 ## Application code layout
 
 Generated code goes in a dedicated directory, never at the target repo's
@@ -333,6 +341,26 @@ Workers run unattended (no human watching each tool call), so v1 defaults to
 Loosen these deliberately per-role only when a specific worker genuinely
 needs more (e.g. a role that must run a package manager against a real
 registry), not as a blanket default.
+
+**Issue one command per Bash call, not `&&`/`;`/`|`-chained compounds.**
+Claude Code parses compound commands and requires *every* sub-command to
+independently match an allow rule — a chain fails outright if even one
+piece isn't covered, which is a deliberate security property (stops a
+disallowed command from smuggling itself in after an allowed-looking
+first one), not a bug to route around. A generic worker role (not one of
+bitfactory's own agents, which don't chain commands) hit this — its
+first attempt chained `git add ... && git commit ...`, which was denied.
+Whether that specific chain should have worked (both halves individually
+match this repo's allow rules) is genuinely unclear — it wasn't cleanly
+reproduced, since the reproduction attempt happened to include `echo`,
+which was never allow-listed at all, so that attempt is fully explained
+without needing the chaining mechanism to be broken. Rather than debug
+which is true, the simple, safe fix is procedural: don't chain. Issue
+`git add ...` and `git commit ...` (or whatever the sequence is) as
+separate Bash tool calls — this sidesteps the ambiguity regardless of
+its cause, and matches Claude Code's own documented intent (an approved
+compound command gets saved as a separate rule per sub-command, not one
+rule for the whole chain).
 
 ## Secrets
 

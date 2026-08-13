@@ -279,6 +279,18 @@ where a decision is expected to be reopened.
   relative path (`.venv/bin/python`) that already worked at the repo
   root — no absolute paths, no new permission rules needed. See
   [architecture.md](architecture.md#worktrees-and-locally-provisioned-environments).
+- **Workers issue one command per Bash call — no `&&`/`;`/`|` chaining.**
+  Compound commands require every sub-command to independently match an
+  allow rule (confirmed, documented Claude Code behavior, not a bug); a
+  generic worker role hit a denial chaining `git add ... && git commit
+  ...`, but the follow-up reproduction attempt happened to include
+  `echo` (never allow-listed), so it doesn't cleanly confirm whether that
+  *specific* chain should have worked. Rather than resolve the ambiguity,
+  the fix is procedural and unconditionally safe: don't chain, issue
+  separate Bash calls. Worth remembering that generic (non-bitfactory)
+  worker roles don't know this convention going in the way `planner.md`/
+  `tester.md` themselves already do — see
+  [architecture.md](architecture.md#worker-guardrails).
 
 ## Observability
 
