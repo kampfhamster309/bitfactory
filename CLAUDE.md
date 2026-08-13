@@ -9,17 +9,21 @@ user stories flow into `backlog/` as tickets, and a pipeline of Claude Code
 agents (planner → workers → tester) plans, implements, tests, and merges
 them with as little human involvement as possible.
 
-**Current status: Phase 3 validated.** The planner/tester agents
+**Current status: Phase 3.5.** The planner/tester agents
 (`.claude/agents/`, also symlinked into `agents/` for visibility) and the
-ticket-filing helper (`scripts/ticket.py`) have driven nine tickets end to
-end against a sandbox target repo — plain, PR-gated
-(`needs_manual_verification`), fully unattended headless
-(`claude -p --permission-mode dontAsk`), real concurrent worker dispatch
-(including a deliberately forced same-file merge conflict, resolved
-correctly both interactively and headlessly), and priority-aware ticket
-selection (`scripts/ticket.py next`) with two tickets genuinely in flight
-at once. See `docs/roadmap.md` for what's next (Phase 4: external ticket
-sources); don't assume tooling exists beyond what's referenced below.
+ticket-filing helper (`scripts/ticket.py`) have driven thirteen tickets
+end to end against a sandbox target repo — single-purpose tests covering
+plain, PR-gated (`needs_manual_verification`), fully unattended headless
+(`claude -p --permission-mode dontAsk`), real concurrent worker dispatch,
+and priority-aware ticket selection (`scripts/ticket.py next`) — plus a
+real small multi-ticket project (Flask + TypeScript counter web app) with
+genuine inter-ticket dependencies, run mostly headlessly with human PR
+review at each gated step. That project surfaced several real gaps
+(see `docs/roadmap.md#phase-35--a-real-multi-ticket-project-and-knowledge-sources`).
+Also added: pointing a ticket at an external Obsidian vault for grounding
+in real reference material (`docs/architecture.md#knowledge-sources`). See
+`docs/roadmap.md` for what's next (Phase 4: external ticket sources);
+don't assume tooling exists beyond what's referenced below.
 
 ## Read this first, in order
 
@@ -168,3 +172,27 @@ those docs first:
   stuck. Don't rely on an agent improvising past a permission gap;
   close it. This applies to any command an agent might reasonably run
   from a worktree other than the repo root, not just git/python.
+- **The tester updates `status:` in the frontmatter on every `git mv`
+  it does, not just the planner's initial claim.** A real headless run
+  following `tester.md` literally left `status:` stale on 3 of 4
+  directory moves — only the `superseded` fail-path said to touch it,
+  since that one needs a non-default value. Not cosmetic:
+  `scripts/ticket.py next`'s `depends_on` check reads `status: done`
+  specifically, so a stale mirror can make a genuinely satisfied
+  dependency look unmet.
+- **Workers issue one Bash command per tool call — never `&&`/`;`/`|`
+  chains.** Claude Code requires every sub-command in a compound to
+  independently match an allow rule; a chain can get denied outright
+  under `dontAsk` even if each half individually would pass. `planner.md`
+  tells the orchestrator to include this in every worker's dispatch
+  prompt, since a generic (non-bitfactory) worker role doesn't know the
+  convention going in.
+- **A ticket can reference an external Obsidian vault via
+  `$KNOWLEDGE_VAULT_PATH`, but a dispatched worker can't be assumed to
+  inherit that env var.** The planner resolves it itself and writes the
+  literal absolute path into the subtask description — same pattern as
+  the `.venv` path / `src/` layout convention. Also: a bare `"Read"`
+  allow rule does **not** cover paths outside the working directory
+  (confirmed by testing) — reading the vault needs its own explicit
+  `Read(//<path>/**)` rule in `.claude/settings.json`. Bitfactory doesn't
+  create/manage the vault itself — read-only external reference material.

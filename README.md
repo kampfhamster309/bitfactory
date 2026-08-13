@@ -5,17 +5,21 @@ stories go into a backlog, and a pipeline of Claude Code agents (planner →
 workers → tester) plans, implements, tests, and merges them with as little
 human involvement as possible.
 
-Status: **Phase 3 validated** — the planner/tester agents
+Status: **Phase 3.5** — the planner/tester agents
 ([agents/README.md](agents/README.md)) and `scripts/ticket.py` have driven
-nine tickets end to end against a sandbox target repo, covering: the plain
-path, the PR-gated (`needs_manual_verification`) path, a fully unattended
-headless (`claude -p`) run, real concurrent worker dispatch (including two
-tickets that deliberately forced a same-file merge conflict, resolved
-correctly both interactively and headlessly), and — Phase 3's own target —
-priority-aware ticket selection (`scripts/ticket.py next`) with two tickets
-genuinely in flight at once, no collisions. See
-[docs/roadmap.md](docs/roadmap.md) for what's next (Phase 4: external
-ticket sources).
+thirteen tickets end to end against a sandbox target repo: single-purpose
+tests covering the plain path, the PR-gated (`needs_manual_verification`)
+path, a fully unattended headless (`claude -p`) run, real concurrent
+worker dispatch, and priority-aware ticket selection — plus a real small
+multi-ticket project (a Flask + TypeScript counter web app) with genuine
+inter-ticket dependencies, run mostly headlessly with human PR review at
+each gated step. That project surfaced several real gaps only sustained,
+less-synthetic use turns up — see
+[docs/roadmap.md](docs/roadmap.md#phase-35--a-real-multi-ticket-project-and-knowledge-sources).
+Also added: pointing a ticket at an external
+[knowledge source](#knowledge-sources) for grounding in real reference
+material. See [docs/roadmap.md](docs/roadmap.md) for what's next
+(Phase 4: external ticket sources).
 
 ## Start here
 
@@ -84,6 +88,18 @@ headless invocation (`claude -p`) so it doesn't stall on permission
 prompts nobody's there to answer. See
 [docs/architecture.md](docs/architecture.md#permission-configuration) for
 what it does and doesn't cover.
+
+## Knowledge sources
+
+A ticket can point at an external Obsidian vault (plain Markdown +
+frontmatter + `[[wikilinks]]`) for grounding in real reference material —
+workers read it directly, no bespoke tooling, no RAG/embeddings. Bitfactory
+doesn't create, populate, or manage the vault; that's out of scope. Needs
+`$KNOWLEDGE_VAULT_PATH` set in the shell profile and a matching
+`Read(//<path>/**)` rule in the target repo's `.claude/settings.json`. See
+[docs/architecture.md](docs/architecture.md#knowledge-sources) for the
+full design, including two things confirmed by testing rather than
+assumed (subagent env-var inheritance, `Read` permission scope).
 
 ## License
 

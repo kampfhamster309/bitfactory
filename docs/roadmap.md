@@ -152,6 +152,36 @@ both, zero collisions. As a bonus, this run also proved the PR gate
 behaves identically with a second ticket concurrently in flight,
 including a real `tea`-not-installed → `curl` REST API fallback.
 
+## Phase 3.5 — A real multi-ticket project, and knowledge sources
+
+Not part of the original phase plan — an insert once Phase 3 was proven,
+to stress-test the whole pipeline on something less synthetic than
+single-purpose test tickets, and to close a gap the single-ticket tests
+couldn't have surfaced.
+
+**A small Flask + TypeScript counter web app**, 4 tickets with real
+dependencies on each other (not the independent test tickets used to
+validate Phase 2/3's mechanics), run end to end — mostly headlessly, with
+real human PR review at each gated ticket. Surfaced and fixed several
+real gaps that only show up under sustained, less-controlled use: a
+worktree-isolation gap for locally-provisioned environments (`.venv`),
+a parser bug against real (not hand-written) planner output, a stale
+`status:` field bug in `tester.md` that a real headless run's literal
+reading exposed, and a Bash command-chaining permission gap.
+
+**Knowledge sources**: pointing a ticket at an external Obsidian vault
+for grounding in real reference material (a CV, a wiki, project
+history), deliberately *not* real RAG — see
+[architecture.md](architecture.md#knowledge-sources) and
+[decisions.md](decisions.md#knowledge-sources) for the design and the
+two things confirmed by testing (subagent env-var inheritance, `Read`
+permission scope) rather than assumed.
+
+**Exit criteria:** none formally set — this phase was reactive, not
+planned. Consider it done once a real ticket has actually drawn on a
+populated vault; as of this writing the vault exists but is still
+essentially empty.
+
 ## Phase 4 — External ticket sources
 
 Add an intake adapter for GitHub Issues/Projects (or Jira) that creates
